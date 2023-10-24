@@ -1,0 +1,62 @@
+from pathlib import Path
+import urllib.request
+
+import pytest
+from test import config
+
+from dagmc import dagnav
+
+# same as the DAGMC model used in the OpenMC DAGMC "legacy" test
+FUEL_PIN_URL = 'https://tinyurl.com/y3ugwz6w' # 1.2 MB
+
+
+def download(url, filename="dagmc.h5m"):
+    """
+    Helper function for retrieving dagmc models
+    """
+    u = urllib.request.urlopen(url)
+
+    if u.status != 200:
+        raise RuntimeError("Failed to download file.")
+
+    # save file via bytestream
+    with open(filename, 'wb') as f:
+        f.write(u.read())
+
+
+@pytest.fixture
+def fuel_pin_model():
+    if Path("fuel_pin.h5m").exists():
+        return
+    download(FUEL_PIN_URL, "fuel_pin.h5m")
+
+
+def test_basic_functionality(request, fuel_pin_model, capfd):
+    mb = dagnav.core.Core()
+    mb.load_file(str(request.path.parent / 'fuel_pin.h5m'))
+    groups = dagnav.get_groups(mb)
+
+    print(groups)
+
+    group = groups['mat:fuel']
+    print(group)
+
+    v1 = group.get_volumes()[1]
+    print(v1)
+
+    groups['mat:fuel'].remove_set(v1)
+    groups['mat:41'].add_set(v1)
+
+    print(groups['mat:fuel'])
+    print(groups['mat:41'])
+
+    out, err = capfd.readouterr()
+
+    gold_name = request.path.parent / 'gold_files' / f'.{request.node.name}.gold'
+    if config['update']:
+        f = open(gold_name, 'w')
+        f.write(out)
+    else:
+        f = open(gold_name, 'r')
+        assert out == f.read()
+

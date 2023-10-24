@@ -1,0 +1,27 @@
+{'picked': Group 1, Name: picked
+, 'mat:fuel': Group 2, Name: mat:fuel
+Volume IDs:
+[1 2]
+, 'mat:Graveyard': Group 0, Name: mat:Graveyard
+Volume IDs:
+[6]
+, 'mat:41': Group 0, Name: mat:41
+Volume IDs:
+[3]
+, 'temp:300': Group 0, Name: temp:300
+Volume IDs:
+[1 2 3]
+}
+Group 2, Name: mat:fuel
+Volume IDs:
+[1 2]
+
+Volume 1, 4092 triangles
+Group 2, Name: mat:fuel
+Volume IDs:
+[2]
+
+Group 0, Name: mat:41
+Volume IDs:
+[1 3]
+
