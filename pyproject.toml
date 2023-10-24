@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dagmc"
+version = "0.0.0"
+authors = [
+    {name = "Patrick Shriwise", email = "pshriwise@gmail.com"},
+]
+description = "A convenience interface for examining DAGMC models using PyMOAB"
+readme = "README.md"
+license = {text = "MIT"}
+dependencies = [
+    "numpy",
+    "pymoab"
+]
+classifiers = [
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3"
+]
+
+
+[project.urls]
+"Homepage" = 
+
+[project.optional-dependencies]
+test = ["pytest"]
