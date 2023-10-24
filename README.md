@@ -4,6 +4,8 @@ A convenience interface for examining and reassigning metadata in DAGMC models w
 
 # Example
 
+Code:
+
 ```python
 from pymoab import core
 from dagmc import dagnav
@@ -20,6 +22,7 @@ v1 = fuel_group.get_volumes()[1]
 
 print(v1)
 ```
+Output:
 
 ```shell
 {'picked': Group 1, Name: picked
@@ -40,6 +43,8 @@ Volume IDs:
 Volume 1, 4092 triangles
 ```
 
+Code:
+
 ```python
 # move volume 1 from the fuel group to the group "mat:41"
 groups['mat:fuel'].remove_set(v1)
@@ -48,6 +53,8 @@ groups['mat:41'].add_set(v1)
 print(groups['mat:fuel'])
 print(groups['mat:41'])
 ```
+
+Output:
 
 ```shell
 Group 2, Name: mat:fuel
