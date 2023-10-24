@@ -21,9 +21,8 @@ classifiers = [
     "Programming Language :: Python :: 3"
 ]
 
-
 [project.urls]
-"Homepage" = 
+"Homepage" = "https://github.com/pshriwise/pydagmc"
 
 [project.optional-dependencies]
 test = ["pytest"]
