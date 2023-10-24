@@ -25,10 +25,10 @@ def download(url, filename="dagmc.h5m"):
 
 
 @pytest.fixture
-def fuel_pin_model():
+def fuel_pin_model(request):
     if Path("fuel_pin.h5m").exists():
         return
-    download(FUEL_PIN_URL, "fuel_pin.h5m")
+    download(FUEL_PIN_URL, request.path.parent / "fuel_pin.h5m")
 
 
 def test_basic_functionality(request, fuel_pin_model, capfd):
