@@ -38,10 +38,10 @@ def test_basic_functionality(request, fuel_pin_model, capfd):
 
     print(groups)
 
-    group = groups['mat:fuel']
-    print(group)
+    fuel_group = groups['mat:fuel']
+    print(fuel_group)
 
-    v1 = group.get_volumes()[1]
+    v1 = fuel_group.get_volumes()[1]
     print(v1)
 
     groups['mat:fuel'].remove_set(v1)
@@ -50,6 +50,16 @@ def test_basic_functionality(request, fuel_pin_model, capfd):
     print(groups['mat:fuel'])
     print(groups['mat:41'])
 
+    assert fuel_group.name == 'mat:fuel'
+    fuel_group.name = 'kalamazoo'
+    assert fuel_group.name == 'kalamazoo'
+
+    print(fuel_group.name)
+
+
+    #####################################
+    # All test code must go before here #
+    #####################################
     out, err = capfd.readouterr()
 
     gold_name = request.path.parent / 'gold_files' / f'.{request.node.name}.gold'
@@ -59,4 +69,3 @@ def test_basic_functionality(request, fuel_pin_model, capfd):
     else:
         f = open(gold_name, 'r')
         assert out == f.read()
-

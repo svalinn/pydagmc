@@ -1,3 +1,5 @@
+from abc import abstractmethod
+from functools import cached_property
 from pymoab import core, types, rng
 import numpy as np
 
@@ -10,33 +12,45 @@ def get_groups(mb):
 
 
 class DAGSet:
-
+    """
+    Generic functionality for a DAGMC EntitySet.
+    """
     def __init__(self, mb, handle):
         self.mb = mb
         self.handle = handle
-        self._id_tag = None
-        self._cat_tag = None
 
     def __eq__(self, other):
         return self.handle == other.handle
 
-    @property
+    @cached_property
     def id_tag(self):
-        if self._id_tag is None:
-            self._id_tag = self.mb.tag_get_handle(types.GLOBAL_ID_TAG_NAME)
-        return self._id_tag
+        """Returns the ID tag.
+        """
+        return self.mb.tag_get_handle(types.GLOBAL_ID_TAG_NAME)
 
-    @property
+    @cached_property
     def category_tag(self):
-        if self._cat_tag is None:
-            self._cat_tag = self.mb.tag_get_handle(types.CATEGORY_TAG_NAME)
-        return self._cat_tag
+        """Returns the category tag used to intidate the use of meshset. Values include "Group", "Volume", "Surface".
+        "Curve" and "Vertex" are also present in the model options but those classes are not supported in this package.
+        """
+        return self.mb.tag_get_handle(types.CATEGORY_TAG_NAME)
 
     @property
     def id(self):
+        """Return the DAGMC set's ID.
+        """
         return self.mb.tag_get_data(self.id_tag, self.handle, flat=True)[0]
 
+    @abstractmethod
+    def _get_triangle_sets(self):
+        """Retrieve all (surface) sets under this set that contain triangle elements.
+        """
+        pass
+
     def to_vtk(self, filename):
+        """Write the set to a VTK file. This will recursively gather all triangles under
+        the group, volume or surface and generate a VTK file.
+        """
         tmp_set = self.mb.create_meshset()
         self.mb.add_entities(tmp_set, self._get_triangle_sets())
         if not filename.endswith('.vtk'):
@@ -46,23 +60,28 @@ class DAGSet:
 
 
 class DAGGeomSet(DAGSet):
-
+    """A base class for representing a DAGMC Geometry set. Only Volumes and Surfaces are currently supported.
+    """
     def __repr__(self):
         return f'{type(self).__name__} {self.id}, {self.num_triangles()} triangles'
 
     def get_triangles(self):
+        """Returns a pymoab.rng.Range of all triangle handles under this set.
+        """
         r = rng.Range()
         for s in self._get_triangle_sets():
             r.merge(self.mb.get_entities_by_type(s.handle, types.MBTRI))
         return r
 
-
 class Surface(DAGGeomSet):
 
     def get_volumes(self):
+        """Get the parent volumes of this surface.
+        """
         return [Volume(self.mb, h) for h in self.mb.get_parent_meshsets(self.handle)]
 
     def num_triangles(self):
+        """Returns the number of triangles in this surface"""
         return len(self.get_triangles())
 
     def _get_triangle_sets(self):
@@ -72,10 +91,12 @@ class Surface(DAGGeomSet):
 class Volume(DAGGeomSet):
 
     def get_surfaces(self):
+        """Returns surface objects for all surfaces making up this vollume"""
         surfs = [Surface(self.mb, h) for h in self.mb.get_child_meshsets(self.handle)]
         return {s.id: s for s in surfs}
 
     def num_triangles(self):
+        """Returns the number of triangles in this volume"""
         return sum([s.num_triangles() for s in self.get_surfaces().values()])
 
     def _get_triangle_sets(self):
@@ -84,19 +105,18 @@ class Volume(DAGGeomSet):
 
 class Group(DAGSet):
 
-    def __init__(self, mb, handle):
-        super().__init__(mb, handle)
-        self._name_tag = None
-
-    @property
+    @cached_property
     def name_tag(self):
-        if self._name_tag is None:
-            self._name_tag = self.mb.tag_get_handle(types.NAME_TAG_NAME)
-        return self._name_tag
+        return self.mb.tag_get_handle(types.NAME_TAG_NAME)
 
     @property
     def name(self):
+        """Returns the name of this group."""
         return self.mb.tag_get_data(self.name_tag, self.handle, flat=True)[0]
+
+    @name.setter
+    def name(self, val):
+        self.mb.tag_set_data(self.name_tag, self.handle, val)
 
     def _get_geom_ent_by_id(self, entity_type, id):
         category_ents = mb.get_entities_by_type_and_tag(self.handle, types.MBENTITYSET, [self.category_tag], [entity_type])
@@ -122,30 +142,36 @@ class Group(DAGSet):
         return self.mb.tag_get_data(self.id_tag, self._get_geom_ent_sets(entity_type), flat=True)
 
     def get_volumes(self):
+        """Returns a list of Volume objects for the volumes contained by the group set."""
         vols = [Volume(self.mb, v) for v in self._get_geom_ent_sets('Volume')]
         return {v.id: v for v in vols}
 
     def get_surfaces(self):
+        """Returns a list of Surface objects for the surfaces contained by the group set."""
         surfs = [Surface(self.mb, s) for s in self._get_geom_ent_sets('Surface')]
         return {s.id: s for s in surfs}
 
     def get_volume_ids(self):
+        """Returns a list of the contained Volume IDs"""
         return self._get_geom_ent_ids('Volume')
 
     def get_surface_ids(self):
+        """Returns a lsit of the contained Surface IDs"""
         return self._get_geom_ent_ids('Surface')
 
-    def remove_set(self, vol):
-        if isinstance(vol, DAGGeomSet):
-            self.mb.remove_entities(self.handle, [vol.handle])
+    def remove_set(self, ent_set):
+        """Remove an entity set from the group."""
+        if isinstance(ent_set, DAGGeomSet):
+            self.mb.remove_entities(self.handle, [ent_set.handle])
         else:
-            self.mb.remove_entities(self.handle, [vol])
+            self.mb.remove_entities(self.handle, [ent_set])
 
-    def add_set(self, entity):
-        if isinstance(entity, DAGGeomSet):
-            self.mb.add_entities(self.handle, [entity.handle])
+    def add_set(self, ent_set):
+        """Add an entity set to the group."""
+        if isinstance(ent_set, DAGGeomSet):
+            self.mb.add_entities(self.handle, [ent_set.handle])
         else:
-            self.mb.add_entities(self.handle, [entity])
+            self.mb.add_entities(self.handle, [ent_set])
 
     def __repr__(self):
         out = f'Group {self.id}, Name: {self.name}\n'
