@@ -3,7 +3,7 @@ requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "dagmc"
+name = "pydagmc"
 version = "0.0.0"
 authors = [
     {name = "Patrick Shriwise", email = "pshriwise@gmail.com"},
@@ -23,6 +23,9 @@ classifiers = [
 
 [project.urls]
 "Homepage" = "https://github.com/pshriwise/pydagmc"
+
+[tool.setuptools]
+packages = ["dagmc"]
 
 [project.optional-dependencies]
 test = ["pytest"]
