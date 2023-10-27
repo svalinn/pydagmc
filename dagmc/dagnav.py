@@ -1,14 +1,10 @@
 from abc import abstractmethod
 from functools import cached_property
-from pymoab import core, types, rng
+from pathlib import Path
+
 import numpy as np
 
-
-def get_groups(mb):
-    category_tag = mb.tag_get_handle(types.CATEGORY_TAG_NAME)
-    group_handles = mb.get_entities_by_type_and_tag(mb.get_root_set(), types.MBENTITYSET, [category_tag], ['Group'])
-    groups = [Group(mb, group_handle) for group_handle in group_handles]
-    return {g.name: g for g in groups}
+from pymoab import core, types, rng
 
 
 class DAGSet:
@@ -187,3 +183,16 @@ class Group(DAGSet):
             out += f'{surf_ids}\n'
 
         return out
+
+    @classmethod
+    def groups_from_file(cls, filename):
+        mb = core.Core()
+        mb.load_file(filename)
+        return cls.from_instane(mb)
+
+    @classmethod
+    def groups_from_instance(cls, mb):
+        category_tag = mb.tag_get_handle(types.CATEGORY_TAG_NAME)
+        group_handles = mb.get_entities_by_type_and_tag(mb.get_root_set(), types.MBENTITYSET, [category_tag], ['Group'])
+        groups = [cls(mb, group_handle) for group_handle in group_handles]
+        return {g.name: g for g in groups}
