@@ -24,8 +24,6 @@ classifiers = [
 [project.urls]
 "Homepage" = "https://github.com/pshriwise/pydagmc"
 
-[tool.setuptools]
-packages = ["dagmc"]
 
 [project.optional-dependencies]
 test = ["pytest"]
