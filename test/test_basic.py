@@ -4,7 +4,9 @@ import urllib.request
 import pytest
 from test import config
 
-from dagmc import dagnav
+from pymoab import core
+
+import dagmc
 
 # same as the DAGMC model used in the OpenMC DAGMC "legacy" test
 FUEL_PIN_URL = 'https://tinyurl.com/y3ugwz6w' # 1.2 MB
@@ -32,9 +34,8 @@ def fuel_pin_model(request):
 
 
 def test_basic_functionality(request, fuel_pin_model, capfd):
-    mb = dagnav.core.Core()
-    mb.load_file(str(request.path.parent / 'fuel_pin.h5m'))
-    groups = dagnav.get_groups(mb)
+    test_file = str(request.path.parent / 'fuel_pin.h5m')
+    groups = dagmc.Group.groups_from_file(test_file)
 
     print(groups)
 
@@ -55,7 +56,6 @@ def test_basic_functionality(request, fuel_pin_model, capfd):
     assert fuel_group.name == 'kalamazoo'
 
     print(fuel_group.name)
-
 
     #####################################
     # All test code must go before here #

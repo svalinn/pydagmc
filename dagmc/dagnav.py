@@ -186,12 +186,27 @@ class Group(DAGSet):
 
     @classmethod
     def groups_from_file(cls, filename):
+        """Extract metadata groups from a file
+
+        Returns
+        -------
+        A mapping with group names as keys and Group instances as values
+
+        """
         mb = core.Core()
         mb.load_file(filename)
-        return cls.from_instane(mb)
+        return cls.groups_from_instance(mb)
 
     @classmethod
     def groups_from_instance(cls, mb):
+        """Extract metadata groups from a pymoab.core.Core instance
+           with a DAGMC file already loaded
+
+        Returns
+        -------
+        A mapping with group names as keys and Group instances as values
+
+        """
         category_tag = mb.tag_get_handle(types.CATEGORY_TAG_NAME)
         group_handles = mb.get_entities_by_type_and_tag(mb.get_root_set(), types.MBENTITYSET, [category_tag], ['Group'])
         groups = [cls(mb, group_handle) for group_handle in group_handles]
