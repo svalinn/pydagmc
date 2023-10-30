@@ -7,13 +7,9 @@ A convenience interface for examining and reassigning metadata in DAGMC models w
 Code:
 
 ```python
-from pymoab import core
-from dagmc import dagnav
+import dagmc
 
-mb = core.Core()
-mb.load_file('dagmc.h5m')
-
-groups = dagnav.get_groups(mb)
+groups = Group.groups_from_file('dagmc.h5m')
 print(groups)
 
 fuel_group = groups['mat:fuel']
