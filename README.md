@@ -9,7 +9,7 @@ Code:
 ```python
 import dagmc
 
-groups = Group.groups_from_file('dagmc.h5m')
+groups = dagmc.Group.groups_from_file('dagmc.h5m')
 print(groups)
 
 fuel_group = groups['mat:fuel']
