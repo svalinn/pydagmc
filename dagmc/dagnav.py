@@ -190,7 +190,7 @@ class Group(DAGSet):
 
         Returns
         -------
-        A mapping with group names as keys and Group instances as values
+        A mapping with group names as keys and dagmc.Group instances as values
 
         """
         mb = core.Core()
@@ -204,7 +204,7 @@ class Group(DAGSet):
 
         Returns
         -------
-        A mapping with group names as keys and Group instances as values
+        A mapping with group names as keys and dagmc.Group instances as values
 
         """
         category_tag = mb.tag_get_handle(types.CATEGORY_TAG_NAME)
