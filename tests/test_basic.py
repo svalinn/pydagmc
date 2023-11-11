@@ -2,7 +2,7 @@ from pathlib import Path
 import urllib.request
 
 import pytest
-from test import config
+from tests import config
 
 from pymoab import core
 

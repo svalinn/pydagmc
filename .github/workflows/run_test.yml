@@ -1,0 +1,44 @@
+name: Run Tests
+
+on:
+  # allows running workflows manually
+  workflow_dispatch:
+
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  main:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install Miniconda
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          auto-activate-base: true
+          activate-environment: ""
+
+      - name: Install MOAB
+        run: |
+          conda install -c conda-forge moab -y
+
+      - name: Install PyDAGMC
+        run: |
+          $(conda info --base)/bin/python -m pip install .
+
+      - name: Test PyDAGMC
+        run: |
+          $(conda info --base)/bin/python -m pip install pytest
+          $(conda info --base)/bin/python -m pytest -ra tests

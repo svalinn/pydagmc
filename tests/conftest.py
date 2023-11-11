@@ -1,4 +1,4 @@
-from test import config as my_config
+from tests import config as my_config
 
 
 def pytest_addoption(parser):
