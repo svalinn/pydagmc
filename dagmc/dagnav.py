@@ -98,7 +98,6 @@ class Volume(DAGGeomSet):
     def _get_triangle_sets(self):
         return [s.handle for s in self.get_surfaces().values()]
 
-
 class Group(DAGSet):
 
     @cached_property
@@ -184,6 +183,21 @@ class Group(DAGSet):
 
         return out
 
+    def merge(self, other_group):
+        """Merge another group into this group. This will remove the other group
+        from the DAGMC file.
+        """
+        if self.name.strip().lower() != other_group.name.strip().lower():
+            raise ValueError(f'Group names {self.name} and {other_group.name} do not match')
+        # move contained entities from the other group into this one
+        other_entities = self.mb.get_entities_by_handle(other_group.handle)
+        self.mb.add_entities(self.handle, other_entities)
+        # remove the other group in the MOAB instance
+        self.mb.delete_entity(other_group.handle)
+        # set the other group's handle to this group's handle so that the
+        # function the same way
+        other_group.handle = self.handle
+
     @classmethod
     def groups_from_file(cls, filename):
         """Extract metadata groups from a file
@@ -209,5 +223,26 @@ class Group(DAGSet):
         """
         category_tag = mb.tag_get_handle(types.CATEGORY_TAG_NAME)
         group_handles = mb.get_entities_by_type_and_tag(mb.get_root_set(), types.MBENTITYSET, [category_tag], ['Group'])
-        groups = [cls(mb, group_handle) for group_handle in group_handles]
-        return {g.name: g for g in groups}
+
+        group_mapping = {}
+
+        for group_handle in group_handles:
+            # create a new class instance for the group handle
+            group = cls(mb, group_handle)
+            group_name = group.name
+            # if the group name already exists in the group_mapping, merge the two groups
+            if group_name in group_mapping:
+                group_mapping[group_name].merge(group)
+                continue
+            group_mapping[group_name] = cls(mb, group_handle)
+
+        return group_mapping
+
+    @classmethod
+    def create(cls, mb, name):
+        """Create a new group instance with the given name"""
+        group_handle = mb.create_meshset()
+        mb.tag_set_data(mb.tag_get_handle(types.NAME_TAG_NAME), group_handle, name)
+        mb.tag_set_data(mb.tag_get_handle(types.CATEGORY_TAG_NAME), group_handle, 'Group')
+        mb.tag_set_data(mb.tag_get_handle(types.GEOM_DIMENSION_TAG_NAME), group_handle, 4)
+        return cls(mb, group_handle)

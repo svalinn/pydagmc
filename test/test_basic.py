@@ -26,14 +26,14 @@ def download(url, filename="dagmc.h5m"):
         f.write(u.read())
 
 
-@pytest.fixture
+@pytest.fixture(autouse=True, scope='module')
 def fuel_pin_model(request):
     if Path("fuel_pin.h5m").exists():
         return
     download(FUEL_PIN_URL, request.path.parent / "fuel_pin.h5m")
 
 
-def test_basic_functionality(request, fuel_pin_model, capfd):
+def test_basic_functionality(request, capfd):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
     groups = dagmc.Group.groups_from_file(test_file)
 
@@ -69,3 +69,37 @@ def test_basic_functionality(request, fuel_pin_model, capfd):
     else:
         f = open(gold_name, 'r')
         assert out == f.read()
+
+
+def test_group_merge(request):
+    test_file = str(request.path.parent / 'fuel_pin.h5m')
+    groups = dagmc.Group.groups_from_file(test_file)
+
+    orig_group = groups['mat:fuel']
+    orig_group_size = len(orig_group.get_volumes())
+    # create a new group with the same name as another group
+    new_group = dagmc.Group.create(orig_group.mb, 'mat:fuel')
+    assert orig_group != new_group
+
+    # merge the new group into the existing group
+    orig_group.merge(new_group)
+    assert orig_group == new_group
+
+    # re-add a new group to the instance with the same name
+    new_group = dagmc.Group.create(orig_group.mb, 'mat:fuel')
+
+    # add one of othher volumes to the new set
+    other_vol = groups['mat:41'].get_volumes()[3]
+    new_group.add_set(other_vol)
+
+    assert orig_group != new_group
+    assert len((new_group.get_volume_ids())) == 1
+
+    # now get the groups again
+    groups = dagmc.Group.groups_from_instance(orig_group.mb)
+
+    # the group named 'mat:fuel' should contain the additional
+    # volume set w/ ID 3 now
+    fuel_group = groups['mat:fuel']
+    assert 3 in fuel_group.get_volumes()
+    assert len(fuel_group.get_volumes()) == orig_group_size + 1
