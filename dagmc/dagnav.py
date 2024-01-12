@@ -61,13 +61,95 @@ class DAGGeomSet(DAGSet):
     def __repr__(self):
         return f'{type(self).__name__} {self.id}, {self.num_triangles()} triangles'
 
-    def get_triangles(self):
+    def get_triangle_handles(self):
         """Returns a pymoab.rng.Range of all triangle handles under this set.
         """
         r = rng.Range()
         for s in self._get_triangle_sets():
-            r.merge(self.mb.get_entities_by_type(s.handle, types.MBTRI))
+            handle = s if not isinstance(s, DAGGeomSet) else s.handle
+            r.merge(self.mb.get_entities_by_type(handle, types.MBTRI))
         return r
+
+    def get_triangle_conn(self):
+        """Returns the triangle connectivity for all triangles under this set.
+
+        Returns
+        -------
+        numpy.ndarray shape=(N, 3), dtype=np.uint64
+        """
+        return self.mb.get_connectivity(self.get_triangle_handles()).reshape(-1, 3)
+
+    def get_triangle_coords(self):
+        """Returns the triangle coordinates for all triangles under this set.
+
+        Returns
+        -------
+        numpy.ndarray shape=(N, 3), dtype=np.float64
+        """
+        conn = self.get_triangle_conn()
+
+        return self.mb.get_coords(conn.flatten()).reshape(-1, 3)
+
+    def get_triangle_conn_and_coords(self, compress=False):
+        """Returns the triangle connectivity and coordinates for all triangles under this set.
+
+        Triangle vertex values can be retrieved using:
+            triangle_conn, coords = Volume.get_triangle_conn_and_coords()
+            triangle_zero_coords = coords[triangle_conn[0]]
+
+        Parameters
+        ----------
+        compress : bool, optional
+            If False, a coordinate numpy array of size (N, 3) will be returned.
+            If True, the coordinates will be compressed to a unique set of coordinates.
+            In either case, entries in the triangle EntityHandle mapping will correspond
+            with the appropriate indices in the coordinate array.
+
+        Returns
+        -------
+        numpy.ndarray shape=(N, 3), dtype=np.uint64
+        numpy.ndarray shape=(N, 3), dtype=np.float64
+        """
+        conn = self.get_triangle_conn()
+
+        if compress:
+            # generate an array of unique coordinates to save space
+            coords, idx_inverse = np.unique(self.mb.get_coords(conn.flatten()).reshape(-1, 3), axis=0, return_inverse=True)
+            # create a mapping from entity handle into the unique coordinates array
+            conn = idx_inverse.reshape(-1, 3)
+        else:
+            coords = self.mb.get_coords(conn.flatten()).reshape(-1, 3)
+            conn = np.arange(coords.shape[0]).reshape(-1, 3)
+
+        return conn, coords
+
+    def triangle_coordinate_mapping(self, compress=False):
+        """Returns a maping from triangle EntityHandle to triangle coordinate indices triangle coordinates.
+
+        Triangle vertex values can be retrieved using:
+            triangle_handles = Volume.get_triangle_handles()
+            triangle_map, coords = Volume.triangle_coordinate_mapping()
+            triangle_zero_coords = coords[triangle_map[triangle_handles[0]]]
+
+        Parameters
+        ----------
+        compress : bool, optional
+            If False, a coordinate numpy array of size (N, 3) will be returned.
+            If True, the coordinates will be compressed to a unique set of coordinates.
+            In either case, entries in the triangle EntityHandle mapping will correspond
+            with the appropriate indices in the coordinate array.
+
+        Returns
+        -------
+        numpy.ndarray shape=(N, 3), dtype=np.uint64
+        """
+        triangle_handles = self.get_triangle_handles()
+        conn, coords = self.get_triangle_conn_and_coords(compress)
+
+        # create a mapping from triangle EntityHandle to triangle index
+        tri_map = {eh: c for eh, c in zip(triangle_handles, conn)}
+        return tri_map, conn
+
 
 class Surface(DAGGeomSet):
 
@@ -78,7 +160,7 @@ class Surface(DAGGeomSet):
 
     def num_triangles(self):
         """Returns the number of triangles in this surface"""
-        return len(self.get_triangles())
+        return len(self.get_triangle_handles())
 
     def _get_triangle_sets(self):
         return [self]

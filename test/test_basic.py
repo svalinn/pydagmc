@@ -103,3 +103,18 @@ def test_group_merge(request):
     fuel_group = groups['mat:fuel']
     assert 3 in fuel_group.get_volumes()
     assert len(fuel_group.get_volumes()) == orig_group_size + 1
+
+
+def test_compressed_coords(request, capfd):
+    test_file = str(request.path.parent / 'fuel_pin.h5m')
+    groups = dagmc.Group.groups_from_file(test_file)
+
+    fuel_group = groups['mat:fuel']
+    v1 = fuel_group.get_volumes()[1]
+    print(v1)
+
+    conn, coords = v1.get_triangle_conn_and_coords()
+    uconn, ucoords = v1.get_triangle_conn_and_coords(compress=True)
+
+    for i in range(v1.num_triangles()):
+        assert (coords[conn[i]] == ucoords[uconn[i]]).all()
