@@ -35,7 +35,7 @@ def fuel_pin_model(request):
 
 def test_basic_functionality(request, capfd):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
-    groups = dagmc.Group.groups_from_file(test_file)
+    groups = dagmc.groups_from_file(test_file)
 
     print(groups)
 
@@ -73,7 +73,7 @@ def test_basic_functionality(request, capfd):
 
 def test_group_merge(request):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
-    groups = dagmc.Group.groups_from_file(test_file)
+    groups = dagmc.groups_from_file(test_file)
 
     orig_group = groups['mat:fuel']
     orig_group_size = len(orig_group.get_volumes())
@@ -96,7 +96,7 @@ def test_group_merge(request):
     assert len((new_group.get_volume_ids())) == 1
 
     # now get the groups again
-    groups = dagmc.Group.groups_from_instance(orig_group.mb)
+    groups = dagmc.groups_from_instance(orig_group.mb)
 
     # the group named 'mat:fuel' should contain the additional
     # volume set w/ ID 3 now
@@ -107,7 +107,7 @@ def test_group_merge(request):
 
 def test_compressed_coords(request, capfd):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
-    groups = dagmc.Group.groups_from_file(test_file)
+    groups = dagmc.groups_from_file(test_file)
 
     fuel_group = groups['mat:fuel']
     v1 = fuel_group.get_volumes()[1]
@@ -122,7 +122,7 @@ def test_compressed_coords(request, capfd):
 
 def test_to_vtk(tmpdir_factory, request):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
-    groups = dagmc.Group.groups_from_file(test_file)
+    groups = dagmc.groups_from_file(test_file)
 
     fuel_group = groups['mat:fuel']
 
