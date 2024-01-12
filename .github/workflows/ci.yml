@@ -33,6 +33,7 @@ jobs:
         shell: bash
         run: |
           pip install numpy \
+                      cython \
                       scipy \
                       matplotlib \
                       h5py \
