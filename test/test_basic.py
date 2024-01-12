@@ -119,9 +119,15 @@ def test_compressed_coords(request, capfd):
     for i in range(v1.num_triangles()):
         assert (coords[conn[i]] == ucoords[uconn[i]]).all()
 
+    conn_map, coords = v1.get_triangle_coordinate_mapping()
+    tris = v1.get_triangle_handles()
+    assert (conn_map[tris[0]].size == 3)
+    assert (coords[conn_map[tris[0]]].size == 9)
+
 def test_coords(request, capfd):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
-    groups = dagmc.groups_from_file(test_file)
+    model = dagmc.DAGModel(test_file)
+    groups = model.groups
 
     group = groups['mat:fuel']
     conn, coords = group.get_triangle_conn_and_coords()

@@ -82,6 +82,9 @@ class DAGSet:
     def __eq__(self, other):
         return self.handle == other.handle
 
+    def __repr__(self):
+        return f'{type(self).__name__} {self.id}, {self.num_triangles()} triangles'
+
     @property
     def id(self):
         """Return the DAGMC set's ID.
@@ -114,7 +117,7 @@ class DAGSet:
         r = rng.Range()
         for s in self._get_triangle_sets():
             handle = s if not isinstance(s, DAGSet) else s.handle
-            r.merge(self.mb.get_entities_by_type(handle, types.MBTRI))
+            r.merge(self.model.mb.get_entities_by_type(handle, types.MBTRI))
         return r
 
     def get_triangle_conn(self):
@@ -170,7 +173,7 @@ class DAGSet:
 
         return conn, coords
 
-    def triangle_coordinate_mapping(self, compress=False):
+    def get_triangle_coordinate_mapping(self, compress=False):
         """Returns a maping from triangle EntityHandle to triangle coordinate indices triangle coordinates.
 
         Triangle vertex values can be retrieved using:
@@ -195,7 +198,7 @@ class DAGSet:
 
         # create a mapping from triangle EntityHandle to triangle index
         tri_map = {eh: c for eh, c in zip(triangle_handles, conn)}
-        return tri_map, conn
+        return tri_map, coords
 
 
 class Surface(DAGSet):
