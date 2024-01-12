@@ -118,3 +118,24 @@ def test_compressed_coords(request, capfd):
 
     for i in range(v1.num_triangles()):
         assert (coords[conn[i]] == ucoords[uconn[i]]).all()
+
+
+def test_to_vtk(tmpdir_factory, request):
+    test_file = str(request.path.parent / 'fuel_pin.h5m')
+    groups = dagmc.Group.groups_from_file(test_file)
+
+    fuel_group = groups['mat:fuel']
+
+    vtk_filename = str(tmpdir_factory.mktemp('vtk').join('fuel_pin.vtk'))
+
+    fuel_group.to_vtk(vtk_filename)
+
+    vtk_file = open(vtk_filename, 'r')
+
+    gold_name = request.path.parent / 'gold_files' / f'.{request.node.name}.gold'
+    if config['update']:
+        f = open(gold_name, 'w')
+        f.write(vtk_file.read())
+    else:
+        f = open(gold_name, 'r')
+        assert vtk_file.read() == f.read()
