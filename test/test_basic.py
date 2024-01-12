@@ -119,6 +119,19 @@ def test_compressed_coords(request, capfd):
     for i in range(v1.num_triangles()):
         assert (coords[conn[i]] == ucoords[uconn[i]]).all()
 
+def test_coords(request, capfd):
+    test_file = str(request.path.parent / 'fuel_pin.h5m')
+    groups = dagmc.groups_from_file(test_file)
+
+    group = groups['mat:fuel']
+    conn, coords = group.get_triangle_conn_and_coords()
+
+    volume = next(iter(group.get_volumes().values()))
+    conn, coords = volume.get_triangle_conn_and_coords(compress=True)
+
+    surface = next(iter(volume.get_surfaces().values()))
+    conn, coords = surface.get_triangle_conn_and_coords(compress=True)
+
 
 def test_to_vtk(tmpdir_factory, request):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
