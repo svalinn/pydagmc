@@ -1,6 +1,15 @@
 # PyDAGMC
 
-A convenience interface for examining and reassigning metadata in DAGMC models with PyMOAB.
+PyDAGMC is a Python interface for interacting with DAGMC .h5m files through the embedded topological relationships and metadata contained within. These interactions occur through a set of Python classes corresponding to DAGMC’s metadata Group (a grouping of volumes or surfaces), Volume, and Surface groupings in the mesh database. This interface is intended to provide a simple interface for obtaining information about DAGMC models, replacing significant boilerplate code required to perform the same queries with PyMOAB, the Python interface for MOAB itself.
+
+PyDAGMC classes provide the ability to perform basic queries as properties of the class instances. These queries include:
+
+- number of triangles contained underneath any of these categories
+- number of entities contained within a group
+- volume and surface relationships
+- movement of volumes or surfaces into and out of groups
+- VTK file generation for all triangles contained under any class instance
+
 
 # Example
 
