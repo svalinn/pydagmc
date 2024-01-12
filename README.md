@@ -4,9 +4,10 @@ PyDAGMC is a Python interface for interacting with DAGMC .h5m files through the 
 
 PyDAGMC classes provide the ability to perform basic queries as properties of the class instances. These queries include:
 
-- number of triangles contained underneath any of these categories
 - number of entities contained within a group
 - volume and surface relationships
+- number of triangles contained underneath any class instance
+- triangle connectivity and coordinates underneath any class instance
 - movement of volumes or surfaces into and out of groups
 - VTK file generation for all triangles contained under any class instance
 
