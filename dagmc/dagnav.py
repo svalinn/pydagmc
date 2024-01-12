@@ -18,6 +18,9 @@ class DAGSet:
     def __eq__(self, other):
         return self.handle == other.handle
 
+    def __repr__(self):
+        return f'{type(self).__name__} {self.id}, {self.num_triangles()} triangles'
+
     @cached_property
     def id_tag(self):
         """Returns the ID tag.
@@ -51,19 +54,12 @@ class DAGSet:
             filename += '.vtk'
         self.mb.write_file(filename, output_sets=[self.handle])
 
-
-class DAGGeomSet(DAGSet):
-    """A base class for representing a DAGMC Geometry set. Only Volumes and Surfaces are currently supported.
-    """
-    def __repr__(self):
-        return f'{type(self).__name__} {self.id}, {self.num_triangles()} triangles'
-
     def get_triangle_handles(self):
         """Returns a pymoab.rng.Range of all triangle handles under this set.
         """
         r = rng.Range()
         for s in self._get_triangle_sets():
-            handle = s if not isinstance(s, DAGGeomSet) else s.handle
+            handle = s if not isinstance(s, DAGSet) else s.handle
             r.merge(self.mb.get_entities_by_type(handle, types.MBTRI))
         return r
 
@@ -148,7 +144,7 @@ class DAGGeomSet(DAGSet):
         return tri_map, conn
 
 
-class Surface(DAGGeomSet):
+class Surface(DAGSet):
 
     def get_volumes(self):
         """Get the parent volumes of this surface.
@@ -163,7 +159,7 @@ class Surface(DAGGeomSet):
         return [self]
 
 
-class Volume(DAGGeomSet):
+class Volume(DAGSet):
 
     def get_surfaces(self):
         """Returns surface objects for all surfaces making up this vollume"""
@@ -235,14 +231,14 @@ class Group(DAGSet):
 
     def remove_set(self, ent_set):
         """Remove an entity set from the group."""
-        if isinstance(ent_set, DAGGeomSet):
+        if isinstance(ent_set, DAGSet):
             self.mb.remove_entities(self.handle, [ent_set.handle])
         else:
             self.mb.remove_entities(self.handle, [ent_set])
 
     def add_set(self, ent_set):
         """Add an entity set to the group."""
-        if isinstance(ent_set, DAGGeomSet):
+        if isinstance(ent_set, DAGSet):
             self.mb.add_entities(self.handle, [ent_set.handle])
         else:
             self.mb.add_entities(self.handle, [ent_set])
