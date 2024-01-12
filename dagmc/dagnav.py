@@ -47,12 +47,9 @@ class DAGSet:
         """Write the set to a VTK file. This will recursively gather all triangles under
         the group, volume or surface and generate a VTK file.
         """
-        tmp_set = self.mb.create_meshset()
-        self.mb.add_entities(tmp_set, self._get_triangle_sets())
         if not filename.endswith('.vtk'):
             filename += '.vtk'
-        self.mb.write_file(filename, output_sets=[tmp_set])
-        self.mb.delete_entity(tmp_set)
+        self.mb.write_file(filename, output_sets=[self.handle])
 
 
 class DAGGeomSet(DAGSet):
