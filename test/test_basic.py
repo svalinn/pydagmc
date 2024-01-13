@@ -102,6 +102,7 @@ def test_group_merge(request):
     # volume set w/ ID 3 now
     fuel_group = groups['mat:fuel']
     assert 3 in fuel_group.get_volumes()
+
     assert len(fuel_group.get_volumes()) == orig_group_size + 1
 
 
@@ -146,9 +147,18 @@ def test_to_vtk(tmpdir_factory, request):
     vtk_file = open(vtk_filename, 'r')
 
     gold_name = request.path.parent / 'gold_files' / f'.{request.node.name}.gold'
+
     if config['update']:
         f = open(gold_name, 'w')
         f.write(vtk_file.read())
     else:
-        f = open(gold_name, 'r')
-        assert vtk_file.read() == f.read()
+        gold_file = open(gold_name, 'r')
+
+        # The VTK file header has a MOAB version in it. Filter
+        # that line out so running this test with other versions of
+        # MOAB doesn't cause a failure
+        line_filter = lambda line : not 'MOAB' in line
+
+        vtk_iter = filter(line_filter, vtk_file)
+        gold_iter = filter(line_filter, gold_file)
+        assert all(l1 == l2 for l1, l2 in zip(vtk_iter, gold_iter))

@@ -50,9 +50,11 @@ jobs:
           git checkout 5.3.1
           mkdir build
           cd build
-          cmake -DENABLE_HDF5=ON -DENABLE_BLASLAPACK=OFF -DENABLE_PYMOAB=ON -DCMAKE_INSTALL_PREFIX=/usr/local -DCMAKE_BUILD_TYPE=Release ..
+          cmake -DENABLE_HDF5=ON -DENABLE_BLASLAPACK=OFF -DENABLE_PYMOAB=ON -DCMAKE_INSTALL_PREFIX=$HOME/opt -DCMAKE_BUILD_TYPE=Release ..
           make -j4
-          sudo make install
+          make install
+          cd pymoab
+          pip3 install .
 
       - name: Install
         shell: bash
