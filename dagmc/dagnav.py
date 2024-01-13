@@ -1,22 +1,50 @@
 from abc import abstractmethod
 from functools import cached_property
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 
 from pymoab import core, types, rng
 
+class DAGModel:
 
-class DAGSet:
-    """
-    Generic functionality for a DAGMC EntitySet.
-    """
-    def __init__(self, mb, handle):
-        self.mb = mb
-        self.handle = handle
+    def __init__(self, moab_file):
+        if isinstance(moab_file, core.Core):
+            self.mb = moab_file
+        else:
+            self.mb = core.Core()
+            self.mb.load_file(moab_file)
 
-    def __eq__(self, other):
-        return self.handle == other.handle
+    def _sets_by_category(self, set_type : str):
+        """Return all sets of a given type"""
+        return self.mb.get_entities_by_type_and_tag(self.mb.get_root_set(), types.MBENTITYSET, [self.category_tag], [set_type])
+
+    @property
+    def surfaces(self):
+        surfaces = [Surface(self, h) for h in self._sets_by_category('Surface')]
+        return {s.id: s for s in surfaces}
+
+    @property
+    def volumes(self):
+        volumes = [Volume(self, h) for h in self._sets_by_category('Volume')]
+        return {v.id: v for v in volumes}
+
+    @property
+    def groups(self):
+        group_handles = self._sets_by_category('Group')
+
+        group_mapping = {}
+        for group_handle in group_handles:
+            # create a new class instance for the group handle
+            group = Group(self, group_handle)
+            group_name = group.name
+            # if the group name already exists in the group_mapping, merge the two groups
+            if group_name in group_mapping:
+                group_mapping[group_name].merge(group)
+                continue
+            group_mapping[group_name] = Group(self, group_handle)
+        return group_mapping
 
     def __repr__(self):
         return f'{type(self).__name__} {self.id}, {self.num_triangles()} triangles'
@@ -34,11 +62,37 @@ class DAGSet:
         """
         return self.mb.tag_get_handle(types.CATEGORY_TAG_NAME)
 
+    @cached_property
+    def name_tag(self):
+        return self.mb.tag_get_handle(types.NAME_TAG_NAME)
+
+    @cached_property
+    def geom_dimension_tag(self):
+        return self.mb.tag_get_handle(types.GEOM_DIMENSION_TAG_NAME)
+
+
+class DAGSet:
+    """
+    Generic functionality for a DAGMC EntitySet.
+    """
+    def __init__(self, model, handle):
+        self.model = model
+        self.handle = handle
+
+    def __eq__(self, other):
+        return self.handle == other.handle
+
     @property
     def id(self):
         """Return the DAGMC set's ID.
         """
-        return self.mb.tag_get_data(self.id_tag, self.handle, flat=True)[0]
+        return self.model.mb.tag_get_data(self.model.id_tag, self.handle, flat=True)[0]
+
+    @property
+    def geom_dimension(self):
+        """Return the DAGMC set's geometry dimension.
+        """
+        return self.model.mb.tag_get_data(self.model.geom_dimension_tag, self.handle, flat=True)[0]
 
     @abstractmethod
     def _get_triangle_sets(self):
@@ -52,7 +106,7 @@ class DAGSet:
         """
         if not filename.endswith('.vtk'):
             filename += '.vtk'
-        self.mb.write_file(filename, output_sets=[self.handle])
+        self.model.mb.write_file(filename, output_sets=[self.handle])
 
     def get_triangle_handles(self):
         """Returns a pymoab.rng.Range of all triangle handles under this set.
@@ -70,7 +124,7 @@ class DAGSet:
         -------
         numpy.ndarray shape=(N, 3), dtype=np.uint64
         """
-        return self.mb.get_connectivity(self.get_triangle_handles()).reshape(-1, 3)
+        return self.model.mb.get_connectivity(self.get_triangle_handles()).reshape(-1, 3)
 
     def get_triangle_coords(self):
         """Returns the triangle coordinates for all triangles under this set.
@@ -81,7 +135,7 @@ class DAGSet:
         """
         conn = self.get_triangle_conn()
 
-        return self.mb.get_coords(conn.flatten()).reshape(-1, 3)
+        return self.model.mb.get_coords(conn.flatten()).reshape(-1, 3)
 
     def get_triangle_conn_and_coords(self, compress=False):
         """Returns the triangle connectivity and coordinates for all triangles under this set.
@@ -107,11 +161,11 @@ class DAGSet:
 
         if compress:
             # generate an array of unique coordinates to save space
-            coords, idx_inverse = np.unique(self.mb.get_coords(conn.flatten()).reshape(-1, 3), axis=0, return_inverse=True)
+            coords, idx_inverse = np.unique(self.model.mb.get_coords(conn.flatten()).reshape(-1, 3), axis=0, return_inverse=True)
             # create a mapping from entity handle into the unique coordinates array
             conn = idx_inverse.reshape(-1, 3)
         else:
-            coords = self.mb.get_coords(conn.flatten()).reshape(-1, 3)
+            coords = self.model.mb.get_coords(conn.flatten()).reshape(-1, 3)
             conn = np.arange(coords.shape[0]).reshape(-1, 3)
 
         return conn, coords
@@ -149,7 +203,7 @@ class Surface(DAGSet):
     def get_volumes(self):
         """Get the parent volumes of this surface.
         """
-        return [Volume(self.mb, h) for h in self.mb.get_parent_meshsets(self.handle)]
+        return [Volume(self.model.mb, h) for h in self.model.mb.get_parent_meshsets(self.handle)]
 
     def num_triangles(self):
         """Returns the number of triangles in this surface"""
@@ -163,7 +217,7 @@ class Volume(DAGSet):
 
     def get_surfaces(self):
         """Returns surface objects for all surfaces making up this vollume"""
-        surfs = [Surface(self.mb, h) for h in self.mb.get_child_meshsets(self.handle)]
+        surfs = [Surface(self.model, h) for h in self.model.mb.get_child_meshsets(self.handle)]
         return {s.id: s for s in surfs}
 
     def num_triangles(self):
@@ -175,27 +229,23 @@ class Volume(DAGSet):
 
 class Group(DAGSet):
 
-    @cached_property
-    def name_tag(self):
-        return self.mb.tag_get_handle(types.NAME_TAG_NAME)
-
     @property
     def name(self):
         """Returns the name of this group."""
-        return self.mb.tag_get_data(self.name_tag, self.handle, flat=True)[0]
+        return self.model.mb.tag_get_data(self.model.name_tag, self.handle, flat=True)[0]
 
     @name.setter
     def name(self, val):
-        self.mb.tag_set_data(self.name_tag, self.handle, val)
+        self.model.mb.tag_set_data(self.model.name_tag, self.handle, val)
 
     def _get_geom_ent_by_id(self, entity_type, id):
-        category_ents = mb.get_entities_by_type_and_tag(self.handle, types.MBENTITYSET, [self.category_tag], [entity_type])
-        ids = self.mb.tag_get_data(self.id_tag, category_ents, flat=True)
+        category_ents = self.model.mb.get_entities_by_type_and_tag(self.handle, types.MBENTITYSET, [self.model.category_tag], [entity_type])
+        ids = self.model.mb.tag_get_data(self.model.id_tag, category_ents, flat=True)
         return category_ents[int(np.where(ids == id)[0][0])]
 
     def _remove_geom_ent_by_id(self, entity_type, id):
         geom_ent = self._get_geom_ent_by_id(entity_type, id)
-        self.mb.remove_entities(self.handle, [geom_ent])
+        self.model.mb.remove_entities(self.handle, [geom_ent])
 
     def _get_triangle_sets(self):
         """Return any sets containing triangles"""
@@ -206,19 +256,19 @@ class Group(DAGSet):
         return list(output)
 
     def _get_geom_ent_sets(self, entity_type):
-        return self.mb.get_entities_by_type_and_tag(self.handle, types.MBENTITYSET, [self.category_tag], [entity_type])
+        return self.model.mb.get_entities_by_type_and_tag(self.handle, types.MBENTITYSET, [self.model.category_tag], [entity_type])
 
     def _get_geom_ent_ids(self, entity_type):
-        return self.mb.tag_get_data(self.id_tag, self._get_geom_ent_sets(entity_type), flat=True)
+        return self.model.mb.tag_get_data(self.model.id_tag, self._get_geom_ent_sets(entity_type), flat=True)
 
     def get_volumes(self):
         """Returns a list of Volume objects for the volumes contained by the group set."""
-        vols = [Volume(self.mb, v) for v in self._get_geom_ent_sets('Volume')]
+        vols = [Volume(self.model, v) for v in self._get_geom_ent_sets('Volume')]
         return {v.id: v for v in vols}
 
     def get_surfaces(self):
         """Returns a list of Surface objects for the surfaces contained by the group set."""
-        surfs = [Surface(self.mb, s) for s in self._get_geom_ent_sets('Surface')]
+        surfs = [Surface(self.model, s) for s in self._get_geom_ent_sets('Surface')]
         return {s.id: s for s in surfs}
 
     def get_volume_ids(self):
@@ -232,16 +282,16 @@ class Group(DAGSet):
     def remove_set(self, ent_set):
         """Remove an entity set from the group."""
         if isinstance(ent_set, DAGSet):
-            self.mb.remove_entities(self.handle, [ent_set.handle])
+            self.model.mb.remove_entities(self.handle, [ent_set.handle])
         else:
-            self.mb.remove_entities(self.handle, [ent_set])
+            self.model.mb.remove_entities(self.handle, [ent_set])
 
     def add_set(self, ent_set):
         """Add an entity set to the group."""
         if isinstance(ent_set, DAGSet):
-            self.mb.add_entities(self.handle, [ent_set.handle])
+            self.model.mb.add_entities(self.handle, [ent_set.handle])
         else:
-            self.mb.add_entities(self.handle, [ent_set])
+            self.model.mb.add_entities(self.handle, [ent_set])
 
     def __repr__(self):
         out = f'Group {self.id}, Name: {self.name}\n'
@@ -265,59 +315,20 @@ class Group(DAGSet):
         if self.name.strip().lower() != other_group.name.strip().lower():
             raise ValueError(f'Group names {self.name} and {other_group.name} do not match')
         # move contained entities from the other group into this one
-        other_entities = self.mb.get_entities_by_handle(other_group.handle)
-        self.mb.add_entities(self.handle, other_entities)
+        other_entities = self.model.mb.get_entities_by_handle(other_group.handle)
+        self.model.mb.add_entities(self.handle, other_entities)
         # remove the other group in the MOAB instance
-        self.mb.delete_entity(other_group.handle)
+        self.model.mb.delete_entity(other_group.handle)
         # set the other group's handle to this group's handle so that the
         # function the same way
         other_group.handle = self.handle
 
     @classmethod
-    def create(cls, mb, name):
+    def create(cls, model, name):
         """Create a new group instance with the given name"""
+        mb = model.mb
         group_handle = mb.create_meshset()
-        mb.tag_set_data(mb.tag_get_handle(types.NAME_TAG_NAME), group_handle, name)
-        mb.tag_set_data(mb.tag_get_handle(types.CATEGORY_TAG_NAME), group_handle, 'Group')
-        mb.tag_set_data(mb.tag_get_handle(types.GEOM_DIMENSION_TAG_NAME), group_handle, 4)
-        return cls(mb, group_handle)
-
-
-def groups_from_instance(mb):
-    """Extract metadata groups from a pymoab.core.Core instance
-        with a DAGMC file already loaded
-
-    Returns
-    -------
-    A mapping with group names as keys and dagmc.Group instances as values
-
-    """
-    category_tag = mb.tag_get_handle(types.CATEGORY_TAG_NAME)
-    group_handles = mb.get_entities_by_type_and_tag(mb.get_root_set(), types.MBENTITYSET, [category_tag], ['Group'])
-
-    group_mapping = {}
-
-    for group_handle in group_handles:
-        # create a new class instance for the group handle
-        group = Group(mb, group_handle)
-        group_name = group.name
-        # if the group name already exists in the group_mapping, merge the two groups
-        if group_name in group_mapping:
-            group_mapping[group_name].merge(group)
-            continue
-        group_mapping[group_name] = Group(mb, group_handle)
-
-    return group_mapping
-
-
-def groups_from_file(filename):
-    """Extract metadata groups from a file
-
-    Returns
-    -------
-    A mapping with group names as keys and dagmc.Group instances as values
-
-    """
-    mb = core.Core()
-    mb.load_file(filename)
-    return groups_from_instance(mb)
+        mb.tag_set_data(model.name_tag, group_handle, name)
+        mb.tag_set_data(model.category_tag, group_handle, 'Group')
+        mb.tag_set_data(model.geom_dimension_tag, group_handle, 4)
+        return cls(model, group_handle)

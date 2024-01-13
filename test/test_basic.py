@@ -35,7 +35,7 @@ def fuel_pin_model(request):
 
 def test_basic_functionality(request, capfd):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
-    groups = dagmc.groups_from_file(test_file)
+    groups = dagmc.DAGModel(test_file).groups
 
     print(groups)
 
@@ -73,12 +73,13 @@ def test_basic_functionality(request, capfd):
 
 def test_group_merge(request):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
-    groups = dagmc.groups_from_file(test_file)
+    model = dagmc.DAGModel(test_file)
+    groups = model.groups
 
     orig_group = groups['mat:fuel']
     orig_group_size = len(orig_group.get_volumes())
     # create a new group with the same name as another group
-    new_group = dagmc.Group.create(orig_group.mb, 'mat:fuel')
+    new_group = dagmc.Group.create(model, 'mat:fuel')
     assert orig_group != new_group
 
     # merge the new group into the existing group
@@ -86,29 +87,27 @@ def test_group_merge(request):
     assert orig_group == new_group
 
     # re-add a new group to the instance with the same name
-    new_group = dagmc.Group.create(orig_group.mb, 'mat:fuel')
+    new_group = dagmc.Group.create(model, 'mat:fuel')
 
-    # add one of othher volumes to the new set
-    other_vol = groups['mat:41'].get_volumes()[3]
-    new_group.add_set(other_vol)
+    # add one of other volumes to the new set
+    for vol in model.volumes.values():
+        new_group.add_set(vol)
 
     assert orig_group != new_group
-    assert len((new_group.get_volume_ids())) == 1
+    assert len((new_group.get_volume_ids())) == len(model.volumes)
 
     # now get the groups again
-    groups = dagmc.groups_from_instance(orig_group.mb)
-
+    groups = model.groups
     # the group named 'mat:fuel' should contain the additional
     # volume set w/ ID 3 now
     fuel_group = groups['mat:fuel']
     assert 3 in fuel_group.get_volumes()
-
     assert len(fuel_group.get_volumes()) == orig_group_size + 1
 
 
 def test_compressed_coords(request, capfd):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
-    groups = dagmc.groups_from_file(test_file)
+    groups = dagmc.DAGModel(test_file).groups
 
     fuel_group = groups['mat:fuel']
     v1 = fuel_group.get_volumes()[1]
@@ -136,7 +135,7 @@ def test_coords(request, capfd):
 
 def test_to_vtk(tmpdir_factory, request):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
-    groups = dagmc.groups_from_file(test_file)
+    groups = dagmc.DAGModel(test_file).groups
 
     fuel_group = groups['mat:fuel']
 
