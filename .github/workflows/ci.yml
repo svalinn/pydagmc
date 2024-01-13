@@ -32,7 +32,7 @@ jobs:
       - name: Python dependencies
         shell: bash
         run: |
-          pip install numpy \
+          pip3 install numpy \
                       cython==0.29.37 \
                       scipy \
                       matplotlib \
@@ -63,3 +63,7 @@ jobs:
         shell: bash
         run: |
           pytest -v .
+
+      - name: tmate debug
+        if: ${{ failure() }}
+        uses: mxschmitt/action-tmate@v3
