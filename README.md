@@ -28,6 +28,10 @@ fuel_group = groups['mat:fuel']
 v1 = fuel_group.get_volumes()[1]
 
 print(v1)
+
+new_group = dagmc.Group.create(model, "my_new_group")
+new_group.id
+
 ```
 Output:
 

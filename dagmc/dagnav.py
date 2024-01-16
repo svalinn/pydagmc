@@ -333,11 +333,16 @@ class Group(DAGSet):
         other_group.handle = self.handle
 
     @classmethod
-    def create(cls, model, name):
+    def create(cls, model, name=None, group_id=None):
         """Create a new group instance with the given name"""
         mb = model.mb
+        # add necessary tags for this meshset to be identified as a group
         group_handle = mb.create_meshset()
-        mb.tag_set_data(model.name_tag, group_handle, name)
         mb.tag_set_data(model.category_tag, group_handle, 'Group')
         mb.tag_set_data(model.geom_dimension_tag, group_handle, 4)
-        return cls(model, group_handle)
+        group = cls(model, group_handle)
+        if name is not None:
+            group.name = name
+        if group_id is not None:
+            group.id = group_id
+        return group
