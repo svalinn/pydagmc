@@ -29,8 +29,8 @@ v1 = fuel_group.get_volumes()[1]
 
 print(v1)
 
-new_group = dagmc.Group.create(model, "my_new_group")
-new_group.id
+new_group = dagmc.Group.create(model, name="my_new_group", group_id=10)
+print(new_group)
 
 ```
 Output:
@@ -52,6 +52,8 @@ Volume IDs:
 }
 
 Volume 1, 4092 triangles
+
+Group 10, Name: my_new_group
 ```
 
 Code:
