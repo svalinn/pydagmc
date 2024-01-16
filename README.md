@@ -19,8 +19,9 @@ Code:
 ```python
 import dagmc
 
-groups = dagmc.Group.groups_from_file('dagmc.h5m')
-print(groups)
+model = dagmc.DAGModel('dagmc.h5m')
+
+print(model.groups)
 
 fuel_group = groups['mat:fuel']
 
