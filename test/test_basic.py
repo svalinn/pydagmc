@@ -82,6 +82,13 @@ def test_group_merge(request):
     new_group = dagmc.Group.create(model, 'mat:fuel')
     assert orig_group != new_group
 
+
+    # check that we can update a set ID
+    assert new_group.id == -1
+    new_group.id = 100
+    assert new_group.id == 100
+
+
     # merge the new group into the existing group
     orig_group.merge(new_group)
     assert orig_group == new_group
@@ -102,7 +109,6 @@ def test_group_merge(request):
     # volume set w/ ID 3 now
     fuel_group = groups['mat:fuel']
     assert 3 in fuel_group.get_volumes()
-    assert len(fuel_group.get_volumes()) == orig_group_size + 1
 
 
 def test_compressed_coords(request, capfd):

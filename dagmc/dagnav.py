@@ -91,6 +91,12 @@ class DAGSet:
         """
         return self.model.mb.tag_get_data(self.model.id_tag, self.handle, flat=True)[0]
 
+    @id.setter
+    def id(self, i):
+        """Set the DAGMC set's ID.
+        """
+        self.model.mb.tag_set_data(self.model.id_tag, self.handle, i)
+
     @property
     def geom_dimension(self):
         """Return the DAGMC set's geometry dimension.
