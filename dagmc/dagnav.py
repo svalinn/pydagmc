@@ -1,6 +1,7 @@
 from __future__ import annotations
 from abc import abstractmethod
 from functools import cached_property
+from itertools import chain
 from typing import Optional, Dict
 
 import numpy as np
@@ -254,8 +255,9 @@ class Volume(DAGSet):
                 group.remove_set(self)
 
         if not existing_group:
-            # Create new group, add name/category tags, add entity
-            new_group = Group.create(self.model, name=f"mat:{name}")
+            # Create new group and add entity
+            group_id = max(g.id for g in self.model.groups.values()) + 1
+            new_group = Group.create(self.model, name=f"mat:{name}", group_id=group_id)
             new_group.add_set(self)
 
     def get_surfaces(self):
@@ -273,7 +275,8 @@ class Volume(DAGSet):
 class Group(DAGSet):
 
     def __contains__(self, ent_set: DAGSet):
-        return any(vol.handle == ent_set.handle for vol in self.get_volumes().values())
+        return any(vol.handle == ent_set.handle for vol in chain(
+            self.get_volumes().values(), self.get_surfaces().values()))
 
     @property
     def name(self) -> str:
