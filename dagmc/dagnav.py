@@ -256,7 +256,7 @@ class Volume(DAGSet):
 
         if not existing_group:
             # Create new group and add entity
-            group_id = max(g.id for g in self.model.groups.values()) + 1
+            group_id = max((g.id for g in self.model.groups.values()), default=0) + 1
             new_group = Group.create(self.model, name=f"mat:{name}", group_id=group_id)
             new_group.add_set(self)
 
