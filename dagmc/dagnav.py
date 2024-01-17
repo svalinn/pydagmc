@@ -1,11 +1,11 @@
+from __future__ import annotations
 from abc import abstractmethod
 from functools import cached_property
-from pathlib import Path
-from typing import Any
+from typing import Optional, Dict
 
 import numpy as np
-
 from pymoab import core, types, rng
+
 
 class DAGModel:
 
@@ -31,7 +31,7 @@ class DAGModel:
         return {v.id: v for v in volumes}
 
     @property
-    def groups(self):
+    def groups(self) -> Dict[str, Group]:
         group_handles = self._sets_by_category('Group')
 
         group_mapping = {}
@@ -75,7 +75,7 @@ class DAGSet:
     """
     Generic functionality for a DAGMC EntitySet.
     """
-    def __init__(self, model, handle):
+    def __init__(self, model: DAGModel, handle):
         self.model = model
         self.handle = handle
 
@@ -224,6 +224,40 @@ class Surface(DAGSet):
 
 class Volume(DAGSet):
 
+    @property
+    def groups(self) -> list[Group]:
+        """Get list of groups containing this volume."""
+        return [group for group in self.model.groups.values() if self in group]
+
+    @property
+    def material(self) -> Optional[str]:
+        """Name of the material assigned to this volume."""
+        for group in self.groups:
+            if self in group and group.name.startswith("mat:"):
+                return group.name[4:]
+        return None
+
+    @material.setter
+    def material(self, name: str):
+        existing_group = False
+        for group in self.model.groups.values():
+            if f"mat:{name}" == group.name:
+                # Add volume to group matching specified name, unless the volume
+                # is already in it
+                if self in group:
+                    return
+                group.add_set(self)
+                existing_group = True
+
+            elif self in group and group.name.startswith("mat:"):
+                # Remove volume from existing group
+                group.remove_set(self)
+
+        if not existing_group:
+            # Create new group, add name/category tags, add entity
+            new_group = Group.create(self.model, name=f"mat:{name}")
+            new_group.add_set(self)
+
     def get_surfaces(self):
         """Returns surface objects for all surfaces making up this vollume"""
         surfs = [Surface(self.model, h) for h in self.model.mb.get_child_meshsets(self.handle)]
@@ -238,13 +272,16 @@ class Volume(DAGSet):
 
 class Group(DAGSet):
 
+    def __contains__(self, ent_set: DAGSet):
+        return any(vol.handle == ent_set.handle for vol in self.get_volumes().values())
+
     @property
-    def name(self):
+    def name(self) -> str:
         """Returns the name of this group."""
         return self.model.mb.tag_get_data(self.model.name_tag, self.handle, flat=True)[0]
 
     @name.setter
-    def name(self, val):
+    def name(self, val: str):
         self.model.mb.tag_set_data(self.model.name_tag, self.handle, val)
 
     def _get_geom_ent_by_id(self, entity_type, id):
@@ -333,7 +370,7 @@ class Group(DAGSet):
         other_group.handle = self.handle
 
     @classmethod
-    def create(cls, model, name=None, group_id=None):
+    def create(cls, model, name=None, group_id=None) -> Group:
         """Create a new group instance with the given name"""
         mb = model.mb
         # add necessary tags for this meshset to be identified as a group
