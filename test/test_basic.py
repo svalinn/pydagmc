@@ -111,6 +111,21 @@ def test_group_merge(request):
     assert 3 in fuel_group.get_volumes()
 
 
+def test_volume(request):
+    test_file = str(request.path.parent / 'fuel_pin.h5m')
+    model = dagmc.DAGModel(test_file)
+
+    v1 = model.volumes[1]
+    assert v1.material == 'fuel'
+    assert v1 in model.groups['mat:fuel']
+
+    v1.material = 'olive oil'
+    assert v1.material == 'olive oil'
+    assert 'mat:olive oil' in model.groups
+    assert v1 in model.groups['mat:olive oil']
+    assert v1 not in model.groups['mat:fuel']
+
+
 def test_compressed_coords(request, capfd):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
     groups = dagmc.DAGModel(test_file).groups

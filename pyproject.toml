@@ -22,7 +22,7 @@ classifiers = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/pshriwise/pydagmc"
+"Homepage" = "https://github.com/svalinn/pydagmc"
 
 
 [project.optional-dependencies]
