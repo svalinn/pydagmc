@@ -5,7 +5,7 @@ from itertools import chain
 from typing import Optional, Dict
 
 import numpy as np
-from pymoab import core, types, rng
+from pymoab import core, types, rng, tag
 
 
 class DAGModel:
@@ -86,23 +86,40 @@ class DAGSet:
     def __repr__(self):
         return f'{type(self).__name__} {self.id}, {self.num_triangles()} triangles'
 
+    def _tag_get_data(self, tag: tag.Tag):
+        return self.model.mb.tag_get_data(tag, self.handle, flat=True)[0]
+
+    def _tag_set_data(self, tag: tag.Tag, value):
+        self.model.mb.tag_set_data(tag, self.handle, value)
+
     @property
-    def id(self):
-        """Return the DAGMC set's ID.
-        """
-        return self.model.mb.tag_get_data(self.model.id_tag, self.handle, flat=True)[0]
+    def id(self) -> int:
+        """Return the DAGMC set's ID."""
+        return self._tag_get_data(self.model.id_tag)
 
     @id.setter
-    def id(self, i):
-        """Set the DAGMC set's ID.
-        """
-        self.model.mb.tag_set_data(self.model.id_tag, self.handle, i)
+    def id(self, i: int):
+        """Set the DAGMC set's ID."""
+        self._tag_set_data(self.model.id_tag, i)
 
     @property
-    def geom_dimension(self):
-        """Return the DAGMC set's geometry dimension.
-        """
-        return self.model.mb.tag_get_data(self.model.geom_dimension_tag, self.handle, flat=True)[0]
+    def geom_dimension(self) -> int:
+        """Return the DAGMC set's geometry dimension."""
+        return self._tag_get_data(self.model.geom_dimension_tag)
+
+    @geom_dimension.setter
+    def geom_dimension(self, dimension: int):
+        self._tag_set_data(self.model.geom_dimension_tag, dimension)
+
+    @property
+    def category(self) -> str:
+        """Return the DAGMC set's category."""
+        return self._tag_get_data(self.model.category_tag)
+
+    @category.setter
+    def category(self, category: str):
+        """Set the DAGMC set's category."""
+        self._tag_set_data(self.model.category_tag, category)
 
     @abstractmethod
     def _get_triangle_sets(self):
@@ -377,10 +394,9 @@ class Group(DAGSet):
         """Create a new group instance with the given name"""
         mb = model.mb
         # add necessary tags for this meshset to be identified as a group
-        group_handle = mb.create_meshset()
-        mb.tag_set_data(model.category_tag, group_handle, 'Group')
-        mb.tag_set_data(model.geom_dimension_tag, group_handle, 4)
-        group = cls(model, group_handle)
+        group = cls(model, mb.create_meshset())
+        group.category = 'Group'
+        group.geom_dimension = 4
         if name is not None:
             group.name = name
         if group_id is not None:
