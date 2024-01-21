@@ -3,6 +3,7 @@ from abc import abstractmethod
 from functools import cached_property
 from itertools import chain
 from typing import Optional, Dict
+from warnings import warn
 
 import numpy as np
 from pymoab import core, types, rng, tag
@@ -76,7 +77,7 @@ class DAGSet:
     """
     Generic functionality for a DAGMC EntitySet.
     """
-    def __init__(self, model: DAGModel, handle):
+    def __init__(self, model: DAGModel, handle: np.uint64):
         self.model = model
         self.handle = handle
 
@@ -227,6 +228,16 @@ class DAGSet:
 
 class Surface(DAGSet):
 
+    _category = 'Surface'
+    _geom_dimension = 2
+
+    def __init__(self, model: DAGModel, handle: np.uint64):
+        super().__init__(model, handle)
+        if self.geom_dimension != self._geom_dimension:
+            warn(f"DAGMC surface with global ID {self.id} does not have geom_dimension=2.")
+        if self.category != self._category:
+            warn(f"DAGMC surface with global ID {self.id} does not have category='Surface'.")
+
     def get_volumes(self):
         """Get the parent volumes of this surface.
         """
@@ -241,6 +252,16 @@ class Surface(DAGSet):
 
 
 class Volume(DAGSet):
+
+    _category: str = 'Volume'
+    _geom_dimension: int = 3
+
+    def __init__(self, model: DAGModel, handle: np.uint64):
+        super().__init__(model, handle)
+        if self.geom_dimension != self._geom_dimension:
+            warn(f"DAGMC volume with global ID {self.id} does not have geom_dimension=3.")
+        if self.category != self._category:
+            warn(f"DAGMC volume with global ID {self.id} does not have category='Volume'.")
 
     @property
     def groups(self) -> list[Group]:
@@ -289,7 +310,16 @@ class Volume(DAGSet):
     def _get_triangle_sets(self):
         return [s.handle for s in self.get_surfaces().values()]
 
+
 class Group(DAGSet):
+
+    _category: str = 'Group'
+    _geom_dimension: int = 4
+
+    def __init__(self, model: DAGModel, handle: np.uint64):
+        super().__init__(model, handle)
+        if self.geom_dimension != self._geom_dimension:
+            warn(f'DAGMC group with global ID {self.id} does not have geom_dimension=4.')
 
     def __contains__(self, ent_set: DAGSet):
         return any(vol.handle == ent_set.handle for vol in chain(
@@ -390,15 +420,17 @@ class Group(DAGSet):
         other_group.handle = self.handle
 
     @classmethod
-    def create(cls, model, name=None, group_id=None) -> Group:
+    def create(cls, model: DAGModel, name: Optional[str] = None, group_id: Optional[int] = None) -> Group:
         """Create a new group instance with the given name"""
-        mb = model.mb
         # add necessary tags for this meshset to be identified as a group
-        group = cls(model, mb.create_meshset())
-        group.category = 'Group'
-        group.geom_dimension = 4
+        ent_set = DAGSet(model, model.mb.create_meshset())
+        ent_set.category = cls._category
+        ent_set.geom_dimension = cls._geom_dimension
+        if group_id is not None:
+            ent_set.id = group_id
+
+        # Now that entity set has proper tags, create Group, assign name, and return
+        group = cls(model, ent_set.handle)
         if name is not None:
             group.name = name
-        if group_id is not None:
-            group.id = group_id
         return group
