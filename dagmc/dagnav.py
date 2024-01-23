@@ -318,8 +318,8 @@ class Group(DAGSet):
 
     def __init__(self, model: DAGModel, handle: np.uint64):
         super().__init__(model, handle)
-        if self.geom_dimension != self._geom_dimension:
-            warn(f'DAGMC group with global ID {self.id} does not have geom_dimension=4.')
+        if self.category != self._category:
+            warn(f"DAGMC group with global ID {self.id} does not have category='Group'.")
 
     def __contains__(self, ent_set: DAGSet):
         return any(vol.handle == ent_set.handle for vol in chain(
