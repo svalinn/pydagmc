@@ -62,15 +62,33 @@ class DAGModel:
         """Returns the category tag used to intidate the use of meshset. Values include "Group", "Volume", "Surface".
         "Curve" and "Vertex" are also present in the model options but those classes are not supported in this package.
         """
-        return self.mb.tag_get_handle(types.CATEGORY_TAG_NAME)
+        return self.mb.tag_get_handle(
+            types.CATEGORY_TAG_NAME,
+            types.CATEGORY_TAG_SIZE,
+            types.MB_TYPE_OPAQUE,
+            types.MB_TAG_SPARSE,
+            create_if_missing=True
+        )
 
     @cached_property
     def name_tag(self):
-        return self.mb.tag_get_handle(types.NAME_TAG_NAME)
+        return self.mb.tag_get_handle(
+            types.NAME_TAG_NAME,
+            types.NAME_TAG_SIZE,
+            types.MB_TYPE_OPAQUE,
+            types.MB_TAG_SPARSE,
+            create_if_missing=True,
+    )
 
     @cached_property
     def geom_dimension_tag(self):
-        return self.mb.tag_get_handle(types.GEOM_DIMENSION_TAG_NAME)
+        return self.mb.tag_get_handle(
+            types.GEOM_DIMENSION_TAG_NAME,
+            1,
+            types.MB_TYPE_INTEGER,
+            types.MB_TAG_SPARSE,
+            create_if_missing=True,
+        )
 
 
 class DAGSet:
@@ -80,6 +98,38 @@ class DAGSet:
     def __init__(self, model: DAGModel, handle: np.uint64):
         self.model = model
         self.handle = handle
+
+    def _check_category_and_dimension(self):
+        """Check for consistency of category and geom_dimension tags"""
+        stype = self._category.lower()
+        geom_dimension = self.geom_dimension
+        category = self.category
+
+        if geom_dimension != -1:
+            # If geom_dimension is assigned but not consistent, raise exception
+            if geom_dimension != self._geom_dimension:
+                raise ValueError(f"DAGMC {stype} ID={self.id} has geom_dimension={geom_dimension}.")
+
+            # If category is unassigned, assign it based on geom_dimension
+            if category is None:
+                if stype == 'group':
+                    warn(f"Assigned category {self._category} to {stype} '{self.name}'.")
+                else:
+                    warn(f"Assigned category {self._category} to {stype} ID={self.id}.")
+                self.category = self._category
+
+        if category is not None:
+            # If category is assigned but not consistent, raise exception
+            if category != self._category:
+                raise ValueError(f"DAGMC {stype} ID={self.id} has category={category}.")
+
+            # If geom_dimension is unassigned, assign it based on category
+            if geom_dimension == -1:
+                if stype == 'group':
+                    warn(f"Assigned geom_dimension={self._geom_dimension} to {stype} '{self.name}'.")
+                else:
+                    warn(f"Assigned geom_dimension={self._geom_dimension} to {stype} ID={self.id}.")
+                self.geom_dimension = self._geom_dimension
 
     def __eq__(self, other):
         return self.handle == other.handle
@@ -113,9 +163,12 @@ class DAGSet:
         self._tag_set_data(self.model.geom_dimension_tag, dimension)
 
     @property
-    def category(self) -> str:
+    def category(self) -> Optional[str]:
         """Return the DAGMC set's category."""
-        return self._tag_get_data(self.model.category_tag)
+        try:
+            return self._tag_get_data(self.model.category_tag)
+        except RuntimeError:
+            return None
 
     @category.setter
     def category(self, category: str):
@@ -233,10 +286,7 @@ class Surface(DAGSet):
 
     def __init__(self, model: DAGModel, handle: np.uint64):
         super().__init__(model, handle)
-        if self.geom_dimension != self._geom_dimension:
-            warn(f"DAGMC surface with global ID {self.id} does not have geom_dimension=2.")
-        if self.category != self._category:
-            warn(f"DAGMC surface with global ID {self.id} does not have category='Surface'.")
+        self._check_category_and_dimension()
 
     def get_volumes(self):
         """Get the parent volumes of this surface.
@@ -258,10 +308,7 @@ class Volume(DAGSet):
 
     def __init__(self, model: DAGModel, handle: np.uint64):
         super().__init__(model, handle)
-        if self.geom_dimension != self._geom_dimension:
-            warn(f"DAGMC volume with global ID {self.id} does not have geom_dimension=3.")
-        if self.category != self._category:
-            warn(f"DAGMC volume with global ID {self.id} does not have category='Volume'.")
+        self._check_category_and_dimension()
 
     @property
     def groups(self) -> list[Group]:
@@ -318,17 +365,19 @@ class Group(DAGSet):
 
     def __init__(self, model: DAGModel, handle: np.uint64):
         super().__init__(model, handle)
-        if self.category != self._category:
-            warn(f"DAGMC group with global ID {self.id} does not have category='Group'.")
+        self._check_category_and_dimension()
 
     def __contains__(self, ent_set: DAGSet):
         return any(vol.handle == ent_set.handle for vol in chain(
             self.get_volumes().values(), self.get_surfaces().values()))
 
     @property
-    def name(self) -> str:
+    def name(self) -> Optional[str]:
         """Returns the name of this group."""
-        return self.model.mb.tag_get_data(self.model.name_tag, self.handle, flat=True)[0]
+        try:
+            return self.model.mb.tag_get_data(self.model.name_tag, self.handle, flat=True)[0]
+        except RuntimeError:
+            return None
 
     @name.setter
     def name(self, val: str):
