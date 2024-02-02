@@ -102,34 +102,32 @@ class DAGSet:
     def _check_category_and_dimension(self):
         """Check for consistency of category and geom_dimension tags"""
         stype = self._category.lower()
+        identifier = f"{stype} '{self.name}'" if stype == 'group' else f"{stype} ID={self.id}"
         geom_dimension = self.geom_dimension
         category = self.category
 
         if geom_dimension != -1:
             # If geom_dimension is assigned but not consistent, raise exception
             if geom_dimension != self._geom_dimension:
-                raise ValueError(f"DAGMC {stype} ID={self.id} has geom_dimension={geom_dimension}.")
+                raise ValueError(f"DAGMC {identifier} has geom_dimension={geom_dimension}.")
 
             # If category is unassigned, assign it based on geom_dimension
             if category is None:
-                if stype == 'group':
-                    warn(f"Assigned category {self._category} to {stype} '{self.name}'.")
-                else:
-                    warn(f"Assigned category {self._category} to {stype} ID={self.id}.")
+                warn(f"Assigned category {self._category} to {identifier}.")
                 self.category = self._category
 
         if category is not None:
             # If category is assigned but not consistent, raise exception
             if category != self._category:
-                raise ValueError(f"DAGMC {stype} ID={self.id} has category={category}.")
+                raise ValueError(f"DAGMC {identifier} has category={category}.")
 
             # If geom_dimension is unassigned, assign it based on category
             if geom_dimension == -1:
-                if stype == 'group':
-                    warn(f"Assigned geom_dimension={self._geom_dimension} to {stype} '{self.name}'.")
-                else:
-                    warn(f"Assigned geom_dimension={self._geom_dimension} to {stype} ID={self.id}.")
+                warn(f"Assigned geom_dimension={self._geom_dimension} to {identifier}.")
                 self.geom_dimension = self._geom_dimension
+
+        if geom_dimension == -1 and category is None:
+            raise ValueError(f"{identifier} has no category or geom_dimension tags assigned.")
 
     def __eq__(self, other):
         return self.handle == other.handle

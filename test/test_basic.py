@@ -218,3 +218,11 @@ def test_empty_geom_dimension(category, dim):
     with pytest.warns(UserWarning):
         obj = getattr(dagmc, category)(model, ent_set.handle)
     assert obj.geom_dimension == dim
+
+
+@pytest.mark.parametrize("cls", [dagmc.Surface, dagmc.Volume, dagmc.Group])
+def test_missing_tags(cls):
+    model = dagmc.DAGModel(core.Core())
+    handle = model.mb.create_meshset()
+    with pytest.raises(ValueError):
+        cls(model, handle)
