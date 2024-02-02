@@ -126,6 +126,14 @@ def test_volume(request):
     assert v1 not in model.groups['mat:fuel']
 
 
+def test_hash(request):
+    test_file = str(request.path.parent / 'fuel_pin.h5m')
+    model = dagmc.DAGModel(test_file)
+
+    s = set(model.volumes)
+    d = {group: group.name for group in model.groups.values()}
+
+
 def test_compressed_coords(request, capfd):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
     groups = dagmc.DAGModel(test_file).groups
