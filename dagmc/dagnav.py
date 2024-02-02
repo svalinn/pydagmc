@@ -3,9 +3,10 @@ from abc import abstractmethod
 from functools import cached_property
 from itertools import chain
 from typing import Optional, Dict
+from warnings import warn
 
 import numpy as np
-from pymoab import core, types, rng
+from pymoab import core, types, rng, tag
 
 
 class DAGModel:
@@ -61,24 +62,72 @@ class DAGModel:
         """Returns the category tag used to intidate the use of meshset. Values include "Group", "Volume", "Surface".
         "Curve" and "Vertex" are also present in the model options but those classes are not supported in this package.
         """
-        return self.mb.tag_get_handle(types.CATEGORY_TAG_NAME)
+        return self.mb.tag_get_handle(
+            types.CATEGORY_TAG_NAME,
+            types.CATEGORY_TAG_SIZE,
+            types.MB_TYPE_OPAQUE,
+            types.MB_TAG_SPARSE,
+            create_if_missing=True
+        )
 
     @cached_property
     def name_tag(self):
-        return self.mb.tag_get_handle(types.NAME_TAG_NAME)
+        return self.mb.tag_get_handle(
+            types.NAME_TAG_NAME,
+            types.NAME_TAG_SIZE,
+            types.MB_TYPE_OPAQUE,
+            types.MB_TAG_SPARSE,
+            create_if_missing=True,
+    )
 
     @cached_property
     def geom_dimension_tag(self):
-        return self.mb.tag_get_handle(types.GEOM_DIMENSION_TAG_NAME)
+        return self.mb.tag_get_handle(
+            types.GEOM_DIMENSION_TAG_NAME,
+            1,
+            types.MB_TYPE_INTEGER,
+            types.MB_TAG_SPARSE,
+            create_if_missing=True,
+        )
 
 
 class DAGSet:
     """
     Generic functionality for a DAGMC EntitySet.
     """
-    def __init__(self, model: DAGModel, handle):
+    def __init__(self, model: DAGModel, handle: np.uint64):
         self.model = model
         self.handle = handle
+
+    def _check_category_and_dimension(self):
+        """Check for consistency of category and geom_dimension tags"""
+        stype = self._category.lower()
+        identifier = f"{stype} '{self.name}'" if stype == 'group' else f"{stype} ID={self.id}"
+        geom_dimension = self.geom_dimension
+        category = self.category
+
+        if geom_dimension != -1:
+            # If geom_dimension is assigned but not consistent, raise exception
+            if geom_dimension != self._geom_dimension:
+                raise ValueError(f"DAGMC {identifier} has geom_dimension={geom_dimension}.")
+
+            # If category is unassigned, assign it based on geom_dimension
+            if category is None:
+                warn(f"Assigned category {self._category} to {identifier}.")
+                self.category = self._category
+
+        if category is not None:
+            # If category is assigned but not consistent, raise exception
+            if category != self._category:
+                raise ValueError(f"DAGMC {identifier} has category={category}.")
+
+            # If geom_dimension is unassigned, assign it based on category
+            if geom_dimension == -1:
+                warn(f"Assigned geom_dimension={self._geom_dimension} to {identifier}.")
+                self.geom_dimension = self._geom_dimension
+
+        if geom_dimension == -1 and category is None:
+            raise ValueError(f"{identifier} has no category or geom_dimension tags assigned.")
 
     def __eq__(self, other):
         return self.handle == other.handle
@@ -86,23 +135,43 @@ class DAGSet:
     def __repr__(self):
         return f'{type(self).__name__} {self.id}, {self.num_triangles()} triangles'
 
+    def _tag_get_data(self, tag: tag.Tag):
+        return self.model.mb.tag_get_data(tag, self.handle, flat=True)[0]
+
+    def _tag_set_data(self, tag: tag.Tag, value):
+        self.model.mb.tag_set_data(tag, self.handle, value)
+
     @property
-    def id(self):
-        """Return the DAGMC set's ID.
-        """
-        return self.model.mb.tag_get_data(self.model.id_tag, self.handle, flat=True)[0]
+    def id(self) -> int:
+        """Return the DAGMC set's ID."""
+        return self._tag_get_data(self.model.id_tag)
 
     @id.setter
-    def id(self, i):
-        """Set the DAGMC set's ID.
-        """
-        self.model.mb.tag_set_data(self.model.id_tag, self.handle, i)
+    def id(self, i: int):
+        """Set the DAGMC set's ID."""
+        self._tag_set_data(self.model.id_tag, i)
 
     @property
-    def geom_dimension(self):
-        """Return the DAGMC set's geometry dimension.
-        """
-        return self.model.mb.tag_get_data(self.model.geom_dimension_tag, self.handle, flat=True)[0]
+    def geom_dimension(self) -> int:
+        """Return the DAGMC set's geometry dimension."""
+        return self._tag_get_data(self.model.geom_dimension_tag)
+
+    @geom_dimension.setter
+    def geom_dimension(self, dimension: int):
+        self._tag_set_data(self.model.geom_dimension_tag, dimension)
+
+    @property
+    def category(self) -> Optional[str]:
+        """Return the DAGMC set's category."""
+        try:
+            return self._tag_get_data(self.model.category_tag)
+        except RuntimeError:
+            return None
+
+    @category.setter
+    def category(self, category: str):
+        """Set the DAGMC set's category."""
+        self._tag_set_data(self.model.category_tag, category)
 
     @abstractmethod
     def _get_triangle_sets(self):
@@ -210,6 +279,13 @@ class DAGSet:
 
 class Surface(DAGSet):
 
+    _category = 'Surface'
+    _geom_dimension = 2
+
+    def __init__(self, model: DAGModel, handle: np.uint64):
+        super().__init__(model, handle)
+        self._check_category_and_dimension()
+
     def get_volumes(self):
         """Get the parent volumes of this surface.
         """
@@ -224,6 +300,13 @@ class Surface(DAGSet):
 
 
 class Volume(DAGSet):
+
+    _category: str = 'Volume'
+    _geom_dimension: int = 3
+
+    def __init__(self, model: DAGModel, handle: np.uint64):
+        super().__init__(model, handle)
+        self._check_category_and_dimension()
 
     @property
     def groups(self) -> list[Group]:
@@ -272,16 +355,27 @@ class Volume(DAGSet):
     def _get_triangle_sets(self):
         return [s.handle for s in self.get_surfaces().values()]
 
+
 class Group(DAGSet):
+
+    _category: str = 'Group'
+    _geom_dimension: int = 4
+
+    def __init__(self, model: DAGModel, handle: np.uint64):
+        super().__init__(model, handle)
+        self._check_category_and_dimension()
 
     def __contains__(self, ent_set: DAGSet):
         return any(vol.handle == ent_set.handle for vol in chain(
             self.get_volumes().values(), self.get_surfaces().values()))
 
     @property
-    def name(self) -> str:
+    def name(self) -> Optional[str]:
         """Returns the name of this group."""
-        return self.model.mb.tag_get_data(self.model.name_tag, self.handle, flat=True)[0]
+        try:
+            return self.model.mb.tag_get_data(self.model.name_tag, self.handle, flat=True)[0]
+        except RuntimeError:
+            return None
 
     @name.setter
     def name(self, val: str):
@@ -373,16 +467,17 @@ class Group(DAGSet):
         other_group.handle = self.handle
 
     @classmethod
-    def create(cls, model, name=None, group_id=None) -> Group:
+    def create(cls, model: DAGModel, name: Optional[str] = None, group_id: Optional[int] = None) -> Group:
         """Create a new group instance with the given name"""
-        mb = model.mb
         # add necessary tags for this meshset to be identified as a group
-        group_handle = mb.create_meshset()
-        mb.tag_set_data(model.category_tag, group_handle, 'Group')
-        mb.tag_set_data(model.geom_dimension_tag, group_handle, 4)
-        group = cls(model, group_handle)
+        ent_set = DAGSet(model, model.mb.create_meshset())
+        ent_set.category = cls._category
+        ent_set.geom_dimension = cls._geom_dimension
+        if group_id is not None:
+            ent_set.id = group_id
+
+        # Now that entity set has proper tags, create Group, assign name, and return
+        group = cls(model, ent_set.handle)
         if name is not None:
             group.name = name
-        if group_id is not None:
-            group.id = group_id
         return group

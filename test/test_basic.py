@@ -188,3 +188,41 @@ def test_to_vtk(tmpdir_factory, request):
         vtk_iter = filter(line_filter, vtk_file)
         gold_iter = filter(line_filter, gold_file)
         assert all(l1 == l2 for l1, l2 in zip(vtk_iter, gold_iter))
+
+
+@pytest.mark.parametrize("category,dim", [('Surface', 2), ('Volume', 3), ('Group', 4)])
+def test_empty_category(category, dim):
+    # Create a volume that has no category assigned
+    mb = core.Core()
+    model = dagmc.DAGModel(mb)
+    ent_set = dagmc.DAGSet(model, mb.create_meshset())
+    ent_set.geom_dimension = dim
+
+    # Instantiating using the proper class (Surface, Volume, Group) should
+    # result in the category tag getting assigned
+    with pytest.warns(UserWarning):
+        obj = getattr(dagmc, category)(model, ent_set.handle)
+    assert obj.category == category
+
+
+@pytest.mark.parametrize("category,dim", [('Surface', 2), ('Volume', 3), ('Group', 4)])
+def test_empty_geom_dimension(category, dim):
+    # Create a volume that has no geom_dimension assigned
+    mb = core.Core()
+    model = dagmc.DAGModel(mb)
+    ent_set = dagmc.DAGSet(model, mb.create_meshset())
+    ent_set.category = category
+
+    # Instantiating using the proper class (Surface, Volume, Group) should
+    # result in the geom_dimension tag getting assigned
+    with pytest.warns(UserWarning):
+        obj = getattr(dagmc, category)(model, ent_set.handle)
+    assert obj.geom_dimension == dim
+
+
+@pytest.mark.parametrize("cls", [dagmc.Surface, dagmc.Volume, dagmc.Group])
+def test_missing_tags(cls):
+    model = dagmc.DAGModel(core.Core())
+    handle = model.mb.create_meshset()
+    with pytest.raises(ValueError):
+        cls(model, handle)
