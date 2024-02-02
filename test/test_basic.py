@@ -82,7 +82,6 @@ def test_group_merge(request):
     new_group = dagmc.Group.create(model, 'mat:fuel')
     assert orig_group != new_group
 
-
     # check that we can update a set ID
     assert new_group.id == -1
     new_group.id = 100
@@ -126,6 +125,21 @@ def test_volume(request):
     assert v1 not in model.groups['mat:fuel']
 
 
+def test_hash(request):
+    test_file = str(request.path.parent / 'fuel_pin.h5m')
+    model = dagmc.DAGModel(test_file)
+
+    s = set(model.volumes)
+    d = {group: group.name for group in model.groups.values()}
+
+    # check that an entry for the same volume with a different model can be entered
+    # into the dict
+    model1 = dagmc.DAGModel(test_file)
+
+    d.update({group: group.name for group in model1.groups.values()})
+
+    assert len(d) == len(model.groups) + len(model1.groups)
+
 def test_compressed_coords(request, capfd):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
     groups = dagmc.DAGModel(test_file).groups
@@ -144,6 +158,7 @@ def test_compressed_coords(request, capfd):
     tris = v1.get_triangle_handles()
     assert (conn_map[tris[0]].size == 3)
     assert (coords[conn_map[tris[0]]].size == 9)
+
 
 def test_coords(request, capfd):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
@@ -226,3 +241,16 @@ def test_missing_tags(cls):
     handle = model.mb.create_meshset()
     with pytest.raises(ValueError):
         cls(model, handle)
+
+
+def test_eq(request):
+    test_file = str(request.path.parent / 'fuel_pin.h5m')
+    model1 = dagmc.DAGModel(test_file)
+    model2 = dagmc.DAGModel(test_file)
+
+    model1_v0 = model1.volumes[1]
+    model2_v0 = model2.volumes[1]
+
+    assert model1_v0.handle == model2_v0.handle
+
+    assert model1_v0 != model2_v0

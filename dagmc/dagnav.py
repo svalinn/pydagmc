@@ -130,7 +130,10 @@ class DAGSet:
             raise ValueError(f"{identifier} has no category or geom_dimension tags assigned.")
 
     def __eq__(self, other):
-        return self.handle == other.handle
+        return self.model == other.model and self.handle == other.handle
+
+    def __hash__(self):
+        return hash((self.handle, id(self.model)))
 
     def __repr__(self):
         return f'{type(self).__name__} {self.id}, {self.num_triangles()} triangles'
