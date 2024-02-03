@@ -130,7 +130,7 @@ def test_surface(request):
     model = dagmc.DAGModel(test_file)
 
     s1 = model.surfaces[1]
-    assert s1.get_volumes == [model.volumes[1], model.volumes[2]]
+    assert s1.get_volumes() == [model.volumes[1], model.volumes[2]]
     assert s1.forward_volume == model.volumes[1]
     assert s1.reverse_volume == model.volumes[2]
 
