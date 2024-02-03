@@ -90,6 +90,17 @@ class DAGModel:
             create_if_missing=True,
         )
 
+    @cached_property
+    def surf_sense_tag(self):
+        """Surface sense tag."""
+        return self.mb.tag_get_handle(
+            "GEOM_SENSE_2",
+            2,
+            types.MB_TYPE_HANDLE,
+            types.MB_TAG_SPARSE,
+            create_if_missing=True,
+        )
+
 
 class DAGSet:
     """
@@ -289,10 +300,52 @@ class Surface(DAGSet):
         super().__init__(model, handle)
         self._check_category_and_dimension()
 
-    def get_volumes(self):
+    @property
+    def surf_sense(self) -> list[np.uint64]:
+        """Surface sense data."""
+        return self.model.mb.tag_get_data(
+            self.model.surf_sense_tag, self.handle, flat=True
+        )
+
+    @surf_sense.setter
+    def surf_sense(self, sense_data: list[np.uint64]):
+        sense_data = [np.uint64(x) for x in sense_data]
+        self._tag_set_data(self.model.surf_sense_tag, sense_data)
+
+    @property
+    def forward_volume(self) -> Optional[Volume]:
+        """Volume with forward sense with respect to the surface."""
+        try:
+            handle = self.surf_sense[0]
+        except RuntimeError:
+            return None
+        return Volume(self.model, handle) if handle != 0 else None
+
+    @forward_volume.setter
+    def forward_volume(self, volume: Volume):
+        reverse_vol = self.reverse_volume
+        reverse_handle = reverse_vol.handle if reverse_vol is not None else 0
+        self.surf_sense = [volume.handle, reverse_handle]
+
+    @property
+    def reverse_volume(self) -> Optional[Volume]:
+        """Volume with reverse sense with respect to the surface."""
+        try:
+            handle = self.surf_sense[1]
+        except RuntimeError:
+            return None
+        return Volume(self.model, handle) if handle != 0 else None
+
+    @reverse_volume.setter
+    def reverse_volume(self, volume: Volume):
+        forward_vol = self.forward_volume
+        forward_handle = forward_vol.handle if forward_vol is not None else 0
+        self.surf_sense = [forward_handle, volume.handle]
+
+    def get_volumes(self) -> list[Volume]:
         """Get the parent volumes of this surface.
         """
-        return [Volume(self.model.mb, h) for h in self.model.mb.get_parent_meshsets(self.handle)]
+        return [Volume(self.model, h) for h in self.model.mb.get_parent_meshsets(self.handle)]
 
     def num_triangles(self):
         """Returns the number of triangles in this surface"""
