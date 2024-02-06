@@ -90,6 +90,15 @@ class DAGModel:
             create_if_missing=True,
         )
 
+    def write_file(self, filename):
+        """Write the model to a file.
+
+        Parameters
+        ----------
+        filename : str
+            The file to write to.
+        """
+        self.mb.write_file(filename)
 
 class DAGSet:
     """
