@@ -279,6 +279,11 @@ class DAGSet:
         tri_map = {eh: c for eh, c in zip(triangle_handles, conn)}
         return tri_map, coords
 
+    def delete(self):
+        """Delete this group from the DAGMC file."""
+        self.model.mb.delete_entity(self.handle)
+        self.handle = None
+        self.model = None
 
 class Surface(DAGSet):
 
