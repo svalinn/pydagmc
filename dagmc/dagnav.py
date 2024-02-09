@@ -111,6 +111,25 @@ class DAGModel:
         """
         self.mb.write_file(filename)
 
+    def add_volume_groups(self, group_map):
+        """Adds groups of volumes to the model.
+
+        Parameters
+        ----------
+        group_map : dict
+            A dictionary mapping group names to a 2-tuple of (int, list) whose
+            first element is the group ID and the second element is a list of
+            volume IDs or Volume objects in the group.
+        """
+        for group_name, (group_id, volumes) in group_map.items():
+            group = Group.create(self, name=group_name, group_id=group_id)
+
+            for volume in volumes:
+                if isinstance(volume, Volume):
+                    group.add_set(volume)
+                else:
+                    group.add_set(self.volumes[volume])
+
 
 class DAGSet:
     """
