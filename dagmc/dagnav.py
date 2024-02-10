@@ -301,46 +301,50 @@ class Surface(DAGSet):
         self._check_category_and_dimension()
 
     @property
-    def surf_sense(self) -> list[np.uint64]:
+    def surf_sense(self) -> list[Optional[Volume]]:
         """Surface sense data."""
-        return self.model.mb.tag_get_data(
+        handles = self.model.mb.tag_get_data(
             self.model.surf_sense_tag, self.handle, flat=True
         )
+        return [Volume(self.model, handle) if handle != 0 else None
+                for handle in handles]
 
     @surf_sense.setter
-    def surf_sense(self, sense_data: list[np.uint64]):
-        sense_data = [np.uint64(x) for x in sense_data]
+    def surf_sense(self, volumes: list[Optional[Volume]]):
+        if len(volumes) != 2:
+            raise ValueError("surf_sense should be a list of two volumes.")
+        sense_data = [vol.handle if vol is not None else np.uint64(0)
+                      for vol in volumes]
         self._tag_set_data(self.model.surf_sense_tag, sense_data)
+
+        # Establish parent-child relationships
+        for vol in volumes:
+            if vol is not None:
+                self.model.mb.add_parent_child(vol.handle, self.handle)
 
     @property
     def forward_volume(self) -> Optional[Volume]:
         """Volume with forward sense with respect to the surface."""
         try:
-            handle = self.surf_sense[0]
+            return self.surf_sense[0]
         except RuntimeError:
             return None
-        return Volume(self.model, handle) if handle != 0 else None
 
     @forward_volume.setter
     def forward_volume(self, volume: Volume):
-        reverse_vol = self.reverse_volume
-        reverse_handle = reverse_vol.handle if reverse_vol is not None else 0
-        self.surf_sense = [volume.handle, reverse_handle]
+        self.surf_sense = [volume, self.reverse_volume]
 
     @property
     def reverse_volume(self) -> Optional[Volume]:
         """Volume with reverse sense with respect to the surface."""
         try:
-            handle = self.surf_sense[1]
+            return self.surf_sense[1]
         except RuntimeError:
             return None
-        return Volume(self.model, handle) if handle != 0 else None
 
     @reverse_volume.setter
     def reverse_volume(self, volume: Volume):
-        forward_vol = self.forward_volume
-        forward_handle = forward_vol.handle if forward_vol is not None else 0
-        self.surf_sense = [forward_handle, volume.handle]
+        self.surf_sense = [self.forward_volume, volume]
 
     def get_volumes(self) -> list[Volume]:
         """Get the parent volumes of this surface.
