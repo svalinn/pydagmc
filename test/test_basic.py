@@ -270,3 +270,11 @@ def test_delete(fuel_pin_model):
     assert 'mat:fuel' not in model.groups
 
 
+def test_write(request, tmpdir):
+    test_file = str(request.path.parent / 'fuel_pin.h5m')
+    model = dagmc.DAGModel(test_file)
+    model.volumes[1].id = 12345
+    model.write_file('fuel_pin_copy.h5m')
+
+    model = dagmc.DAGModel('fuel_pin_copy.h5m')
+    assert 12345 in model.volumes
