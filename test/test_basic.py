@@ -256,6 +256,7 @@ def test_eq(request):
 
     assert model1_v0 != model2_v0
 
+
 def test_delete(fuel_pin_model):
     model = dagmc.DAGModel(fuel_pin_model)
 
