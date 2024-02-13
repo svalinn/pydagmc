@@ -101,6 +101,16 @@ class DAGModel:
             create_if_missing=True,
         )
 
+    def write_file(self, filename):
+        """Write the model to a file.
+
+        Parameters
+        ----------
+        filename : str
+            The file to write to.
+        """
+        self.mb.write_file(filename)
+
 
 class DAGSet:
     """
@@ -290,6 +300,11 @@ class DAGSet:
         tri_map = {eh: c for eh, c in zip(triangle_handles, conn)}
         return tri_map, coords
 
+    def delete(self):
+        """Delete this group from the DAGMC file."""
+        self.model.mb.delete_entity(self.handle)
+        self.handle = None
+        self.model = None
 
 class Surface(DAGSet):
 

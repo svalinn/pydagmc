@@ -28,9 +28,10 @@ def download(url, filename="dagmc.h5m"):
 
 @pytest.fixture(autouse=True, scope='module')
 def fuel_pin_model(request):
-    if Path("fuel_pin.h5m").exists():
-        return
-    download(FUEL_PIN_URL, request.path.parent / "fuel_pin.h5m")
+    fuel_pin_path = request.path.parent / "fuel_pin.h5m"
+    if not Path(fuel_pin_path).exists():
+        download(FUEL_PIN_URL, fuel_pin_path)
+    return str(fuel_pin_path)
 
 
 def test_basic_functionality(request, capfd):
@@ -264,3 +265,27 @@ def test_eq(request):
     assert model1_v0.handle == model2_v0.handle
 
     assert model1_v0 != model2_v0
+
+
+def test_delete(fuel_pin_model):
+    model = dagmc.DAGModel(fuel_pin_model)
+
+    fuel_group = model.groups['mat:fuel']
+    fuel_group.delete()
+
+    # attempt an operation on the group
+    with pytest.raises(AttributeError, match="has no attribute 'mb'"):
+        fuel_group.get_volumes()
+
+    # ensure the group is no longer returned by the model
+    assert 'mat:fuel' not in model.groups
+
+
+def test_write(request, tmpdir):
+    test_file = str(request.path.parent / 'fuel_pin.h5m')
+    model = dagmc.DAGModel(test_file)
+    model.volumes[1].id = 12345
+    model.write_file('fuel_pin_copy.h5m')
+
+    model = dagmc.DAGModel('fuel_pin_copy.h5m')
+    assert 12345 in model.volumes
