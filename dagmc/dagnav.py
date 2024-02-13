@@ -303,9 +303,12 @@ class Surface(DAGSet):
     @property
     def surf_sense(self) -> list[Optional[Volume]]:
         """Surface sense data."""
-        handles = self.model.mb.tag_get_data(
-            self.model.surf_sense_tag, self.handle, flat=True
-        )
+        try:
+            handles = self.model.mb.tag_get_data(
+                self.model.surf_sense_tag, self.handle, flat=True
+            )
+        except RuntimeError:
+            return [None, None]
         return [Volume(self.model, handle) if handle != 0 else None
                 for handle in handles]
 
@@ -325,10 +328,7 @@ class Surface(DAGSet):
     @property
     def forward_volume(self) -> Optional[Volume]:
         """Volume with forward sense with respect to the surface."""
-        try:
-            return self.surf_sense[0]
-        except RuntimeError:
-            return None
+        return self.surf_sense[0]
 
     @forward_volume.setter
     def forward_volume(self, volume: Volume):
@@ -337,10 +337,7 @@ class Surface(DAGSet):
     @property
     def reverse_volume(self) -> Optional[Volume]:
         """Volume with reverse sense with respect to the surface."""
-        try:
-            return self.surf_sense[1]
-        except RuntimeError:
-            return None
+        return self.surf_sense[1]
 
     @reverse_volume.setter
     def reverse_volume(self, volume: Volume):
