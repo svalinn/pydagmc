@@ -135,6 +135,14 @@ def test_surface(request):
     assert s1.forward_volume == model.volumes[1]
     assert s1.reverse_volume == model.volumes[2]
 
+    s1.forward_volume = model.volumes[3]
+    assert s1.forward_volume == model.volumes[3]
+    assert s1.surf_sense == [model.volumes[3], model.volumes[2]]
+
+    s1.reverse_volume = model.volumes[1]
+    assert s1.reverse_volume == model.volumes[1]
+    assert s1.surf_sense == [model.volumes[3], model.volumes[1]]
+
 
 def test_hash(request):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
