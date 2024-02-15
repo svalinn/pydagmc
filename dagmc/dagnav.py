@@ -90,6 +90,17 @@ class DAGModel:
             create_if_missing=True,
         )
 
+    @cached_property
+    def surf_sense_tag(self):
+        """Surface sense tag."""
+        return self.mb.tag_get_handle(
+            "GEOM_SENSE_2",
+            2,
+            types.MB_TYPE_HANDLE,
+            types.MB_TAG_SPARSE,
+            create_if_missing=True,
+        )
+
     def write_file(self, filename):
         """Write the model to a file.
 
@@ -99,6 +110,7 @@ class DAGModel:
             The file to write to.
         """
         self.mb.write_file(filename)
+
 
 class DAGSet:
     """
@@ -303,10 +315,53 @@ class Surface(DAGSet):
         super().__init__(model, handle)
         self._check_category_and_dimension()
 
-    def get_volumes(self):
+    @property
+    def surf_sense(self) -> list[Optional[Volume]]:
+        """Surface sense data."""
+        try:
+            handles = self.model.mb.tag_get_data(
+                self.model.surf_sense_tag, self.handle, flat=True
+            )
+        except RuntimeError:
+            return [None, None]
+        return [Volume(self.model, handle) if handle != 0 else None
+                for handle in handles]
+
+    @surf_sense.setter
+    def surf_sense(self, volumes: list[Optional[Volume]]):
+        if len(volumes) != 2:
+            raise ValueError("surf_sense should be a list of two volumes.")
+        sense_data = [vol.handle if vol is not None else np.uint64(0)
+                      for vol in volumes]
+        self._tag_set_data(self.model.surf_sense_tag, sense_data)
+
+        # Establish parent-child relationships
+        for vol in volumes:
+            if vol is not None:
+                self.model.mb.add_parent_child(vol.handle, self.handle)
+
+    @property
+    def forward_volume(self) -> Optional[Volume]:
+        """Volume with forward sense with respect to the surface."""
+        return self.surf_sense[0]
+
+    @forward_volume.setter
+    def forward_volume(self, volume: Volume):
+        self.surf_sense = [volume, self.reverse_volume]
+
+    @property
+    def reverse_volume(self) -> Optional[Volume]:
+        """Volume with reverse sense with respect to the surface."""
+        return self.surf_sense[1]
+
+    @reverse_volume.setter
+    def reverse_volume(self, volume: Volume):
+        self.surf_sense = [self.forward_volume, volume]
+
+    def get_volumes(self) -> list[Volume]:
         """Get the parent volumes of this surface.
         """
-        return [Volume(self.model.mb, h) for h in self.model.mb.get_parent_meshsets(self.handle)]
+        return [Volume(self.model, h) for h in self.model.mb.get_parent_meshsets(self.handle)]
 
     def num_triangles(self):
         """Returns the number of triangles in this surface"""
