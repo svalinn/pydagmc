@@ -370,6 +370,16 @@ class Surface(DAGSet):
     def _get_triangle_sets(self):
         return [self]
 
+    @property
+    def area(self):
+        """Returns the area of the surface"""
+        conn, coords = self.get_triangle_conn_and_coords()
+        sum = 0.0
+        for _conn in conn:
+            tri_coords = coords[_conn]
+            sum += np.linalg.norm(np.cross(tri_coords[1] - tri_coords[0], tri_coords[2] - tri_coords[0]))
+        return 0.5 * sum
+
 
 class Volume(DAGSet):
 
@@ -427,6 +437,20 @@ class Volume(DAGSet):
     def _get_triangle_sets(self):
         return [s.handle for s in self.get_surfaces().values()]
 
+    @property
+    def volume(self):
+        """Returns the volume of the volume"""
+        volume = 0.0
+        for surface in self.get_surfaces().values():
+            conn, coords = surface.get_triangle_conn_and_coords()
+            sum = 0.0
+            for _conn in conn:
+                tri_coords = coords[_conn]
+                c = np.cross(tri_coords[1] - tri_coords[0], tri_coords[2] - tri_coords[0])
+                sum += np.dot(c, tri_coords[0])
+            sign = 1 if surface.forward_volume == self else -1
+            volume += sign * sum
+        return volume / 6.0
 
 class Group(DAGSet):
 

@@ -2,6 +2,8 @@ from pathlib import Path
 import urllib.request
 
 import pytest
+import numpy as np
+
 from test import config
 
 from pymoab import core
@@ -297,3 +299,30 @@ def test_write(request, tmpdir):
 
     model = dagmc.DAGModel('fuel_pin_copy.h5m')
     assert 12345 in model.volumes
+
+
+def test_volume(request):
+    test_file = str(request.path.parent / 'fuel_pin.h5m')
+    model = dagmc.DAGModel(test_file)
+    exp_vols = {1: np.pi * 7**2 * 40,
+                2: np.pi * (9**2 - 7**2) * 40,
+                3: np.pi * (10**2 - 9**2) * 40,}
+    pytest.approx(model.volumes[1].volume, exp_vols[1])
+    pytest.approx(model.volumes[2].volume, exp_vols[2])
+    pytest.approx(model.volumes[3].volume, exp_vols[3])
+
+
+def test_area(request):
+    test_file = str(request.path.parent / 'fuel_pin.h5m')
+    model = dagmc.DAGModel(test_file)
+    exp_areas = {1: 2 * np.pi * 7 * 40,
+                 2: np.pi * 7**2,
+                 3: np.pi * 7**2,
+                 5: 2 * np.pi * 9 * 40,
+                 6: np.pi * 9**2,
+                 7: np.pi * 9**2,
+                 9: 2 * np.pi * 10 * 40,
+                 10: np.pi * 10**2,
+                 11: np.pi * 10**2 }
+    for surf_id, exp_area in exp_areas.items():
+        pytest.approx(model.surfaces[surf_id].area, exp_area)
