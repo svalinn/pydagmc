@@ -1,3 +1,14 @@
-*~
 *.h5m
 __pycache__
+
+# Python distribution
+.settings/
+dist/
+pydagmc.egg-info/
+
+# emacs and vim backups
+*~
+*.swp
+
+# Source build
+build
