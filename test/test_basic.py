@@ -127,6 +127,11 @@ def test_volume(request):
     assert v1 in model.groups['mat:olive oil']
     assert v1 not in model.groups['mat:fuel']
 
+    new_vol = dagmc.Volume.create(model, 100)
+    assert isinstance(new_vol, dagmc.Volume)
+    assert new_vol.id == 100
+    assert model.volumes[100] == new_vol
+
 
 def test_surface(request):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
@@ -144,6 +149,11 @@ def test_surface(request):
     s1.reverse_volume = model.volumes[1]
     assert s1.reverse_volume == model.volumes[1]
     assert s1.surf_sense == [model.volumes[3], model.volumes[1]]
+
+    new_surf = dagmc.Surface.create(model, 100)
+    assert isinstance(new_surf, dagmc.Surface)
+    assert new_surf.id == 100
+    assert model.surfaces[100] == new_surf
 
 
 def test_hash(request):
