@@ -306,6 +306,20 @@ class DAGSet:
         self.handle = None
         self.model = None
 
+    @classmethod
+    def create(cls, model: DAGModel, global_id: Optional[int] = None) -> Surface:
+        """Create new set"""
+        # Add necessary tags for this meshset to be identified appropriately
+        ent_set = DAGSet(model, model.mb.create_meshset())
+        ent_set.geom_dimension = cls._geom_dimension
+        ent_set.category = cls._category
+        if global_id is not None:
+            ent_set.id = global_id
+
+        # Now that entity set has proper tags, create derived class and return
+        return cls(model, ent_set.handle)
+
+
 class Surface(DAGSet):
 
     _category = 'Surface'
@@ -451,6 +465,7 @@ class Volume(DAGSet):
             sign = 1 if surface.forward_volume == self else -1
             volume += sign * sum
         return volume / 6.0
+
 
 class Group(DAGSet):
 
