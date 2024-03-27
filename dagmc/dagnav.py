@@ -111,24 +111,30 @@ class DAGModel:
         """
         self.mb.write_file(filename)
 
-    def add_volume_groups(self, group_map):
-        """Adds groups of volumes to the model.
+    def add_groups(self, group_map):
+        """Adds groups of DAGSets to the model.
 
         Parameters
         ----------
         group_map : dict
-            A dictionary mapping group names to a 2-tuple of (int, list) whose
-            first element is the group ID and the second element is a list of
-            volume IDs or Volume objects in the group.
+            A dictionary whose keys are 2-tuples of (str, int) containing the
+            group name and group ID respectively and whose values are iterables
+            of DAGSet objects or DAGSet ID numbers.
         """
-        for group_name, (group_id, volumes) in group_map.items():
+        for (group_name, group_id), dagsets in group_map.items():
             group = Group.create(self, name=group_name, group_id=group_id)
 
-            for volume in volumes:
-                if isinstance(volume, Volume):
-                    group.add_set(volume)
+            for dagset in dagsets:
+                if isinstance(dagset, DAGSet):
+                    group.add_set(dagset)
                 else:
-                    group.add_set(self.volumes[volume])
+                    if dagset in self.volumes:
+                        group.add_set(self.volumes[dagset])
+                    elif dagset in self.surfaces:
+                        group.add_set(self.surfaces[dagset])
+                    else:
+                        raise ValueError(f"DAGSet ID={dagset} could not be "
+                                         "found in model volumes or surfaces.")
 
 
 class DAGSet:
