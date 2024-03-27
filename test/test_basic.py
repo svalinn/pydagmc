@@ -326,3 +326,33 @@ def test_area(request):
                  11: np.pi * 10**2 }
     for surf_id, exp_area in exp_areas.items():
         pytest.approx(model.surfaces[surf_id].area, exp_area)
+
+
+def test_add_groups(request):
+    test_file = str(request.path.parent / 'fuel_pin.h5m')
+    model = dagmc.DAGModel(test_file)
+    volumes = model.volumes
+    surfaces = model.surfaces
+
+    for group in model.groups.values():
+        group.delete()
+
+    assert len(model.groups) == 0
+
+    group_map = {("mat:fuel", 1): [1, 2],
+                 ("mat:Graveyard", 0): [volumes[6]],
+                 ("mat:41", 2): [3],
+                 ("boundary:Reflecting", 3): [27, 28, 29],
+                 ("boundary:Vacuum", 4): [surfaces[24], surfaces[25]]
+                 }
+
+    model.add_groups(group_map)
+
+    groups = model.groups
+
+    assert len(groups) == 5
+    assert [1, 2] == sorted(groups['mat:fuel'].get_volume_ids())
+    assert [6] == groups['mat:Graveyard'].get_volume_ids()
+    assert [3] == groups['mat:41'].get_volume_ids()
+    assert [27, 28, 29] == sorted(groups['boundary:Reflecting'].get_surface_ids())
+    assert [24, 25] == sorted(groups['boundary:Vacuum'].get_surface_ids())
