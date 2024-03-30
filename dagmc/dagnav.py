@@ -134,10 +134,10 @@ class DAGModel:
                 if isinstance(dagset, DAGSet):
                     group.add_set(dagset)
                 else:
-                    if dagset in self.volumes:
-                        group.add_set(self.volumes[dagset])
-                    elif dagset in self.surfaces:
-                        group.add_set(self.surfaces[dagset])
+                    if dagset in self.volumes_by_id:
+                        group.add_set(self.volumes_by_id[dagset])
+                    elif dagset in self.surfaces_by_id:
+                        group.add_set(self.surfaces_by_id[dagset])
                     else:
                         raise ValueError(f"DAGSet ID={dagset} could not be "
                                          "found in model volumes or surfaces.")

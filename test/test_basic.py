@@ -132,18 +132,18 @@ def test_surface(request):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
     model = dagmc.DAGModel(test_file)
 
-    s1 = model.surfaces[1]
-    assert s1.volumes == [model.volumes[1], model.volumes[2]]
-    assert s1.forward_volume == model.volumes[1]
-    assert s1.reverse_volume == model.volumes[2]
+    s1 = model.surfaces_by_id[1]
+    assert s1.volumes == [model.volumes_by_id[1], model.volumes_by_id[2]]
+    assert s1.forward_volume == model.volumes_by_id[1]
+    assert s1.reverse_volume == model.volumes_by_id[2]
 
-    s1.forward_volume = model.volumes[3]
-    assert s1.forward_volume == model.volumes[3]
-    assert s1.surf_sense == [model.volumes[3], model.volumes[2]]
+    s1.forward_volume = model.volumes_by_id[3]
+    assert s1.forward_volume == model.volumes_by_id[3]
+    assert s1.surf_sense == [model.volumes_by_id[3], model.volumes_by_id[2]]
 
-    s1.reverse_volume = model.volumes[1]
-    assert s1.reverse_volume == model.volumes[1]
-    assert s1.surf_sense == [model.volumes[3], model.volumes[1]]
+    s1.reverse_volume = model.volumes_by_id[1]
+    assert s1.reverse_volume == model.volumes_by_id[1]
+    assert s1.surf_sense == [model.volumes_by_id[3], model.volumes_by_id[1]]
 
 
 def test_hash(request):
@@ -298,7 +298,7 @@ def test_write(request, tmpdir):
     model.write_file('fuel_pin_copy.h5m')
 
     model = dagmc.DAGModel('fuel_pin_copy.h5m')
-    assert 12345 in model.volumes
+    assert 12345 in model.volumes_by_id
 
 
 def test_volume(request):
@@ -331,8 +331,8 @@ def test_area(request):
 def test_add_groups(request):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
     model = dagmc.DAGModel(test_file)
-    volumes = model.volumes
-    surfaces = model.surfaces
+    volumes = model.volumes_by_id
+    surfaces = model.surfaces_by_id
 
     for group in model.groups.values():
         group.delete()
