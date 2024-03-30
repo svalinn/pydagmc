@@ -55,7 +55,7 @@ class DAGModel:
         return group_mapping
 
     def __repr__(self):
-        return f'{type(self).__name__} {self.id}, {self.num_triangles()} triangles'
+        return f'{type(self).__name__} {self.id}, {self.num_triangles} triangles'
 
     @cached_property
     def id_tag(self):
@@ -188,7 +188,7 @@ class DAGSet:
         return hash((self.handle, id(self.model)))
 
     def __repr__(self):
-        return f'{type(self).__name__} {self.id}, {self.num_triangles()} triangles'
+        return f'{type(self).__name__} {self.id}, {self.num_triangles} triangles'
 
     def _tag_get_data(self, tag: tag.Tag):
         return self.model.mb.tag_get_data(tag, self.handle, flat=True)[0]

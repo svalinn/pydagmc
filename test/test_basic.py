@@ -99,7 +99,7 @@ def test_group_merge(request):
     new_group = dagmc.Group.create(model, 'mat:fuel')
 
     # add one of other volumes to the new set
-    for vol in model.volumes.values():
+    for vol in model.volumes:
         new_group.add_set(vol)
 
     assert orig_group != new_group
