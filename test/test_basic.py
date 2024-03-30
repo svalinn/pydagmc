@@ -45,7 +45,7 @@ def test_basic_functionality(request, capfd):
     fuel_group = groups['mat:fuel']
     print(fuel_group)
 
-    v1 = fuel_group.get_volumes()[1]
+    v1 = fuel_group.volumes_by_id[1]
     print(v1)
 
     groups['mat:fuel'].remove_set(v1)
@@ -80,7 +80,7 @@ def test_group_merge(request):
     groups = model.groups
 
     orig_group = groups['mat:fuel']
-    orig_group_size = len(orig_group.get_volumes())
+    orig_group_size = len(orig_group.volumes)
     # create a new group with the same name as another group
     new_group = dagmc.Group.create(model, 'mat:fuel')
     assert orig_group != new_group
@@ -103,14 +103,14 @@ def test_group_merge(request):
         new_group.add_set(vol)
 
     assert orig_group != new_group
-    assert len((new_group.get_volume_ids())) == len(model.volumes)
+    assert len((new_group.volume_ids)) == len(model.volumes)
 
     # now get the groups again
     groups = model.groups
     # the group named 'mat:fuel' should contain the additional
     # volume set w/ ID 3 now
     fuel_group = groups['mat:fuel']
-    assert 3 in fuel_group.get_volumes()
+    assert 3 in fuel_group.volumes_by_id
 
 
 def test_volume(request):
@@ -133,7 +133,7 @@ def test_surface(request):
     model = dagmc.DAGModel(test_file)
 
     s1 = model.surfaces[1]
-    assert s1.get_volumes() == [model.volumes[1], model.volumes[2]]
+    assert s1.volumes == [model.volumes[1], model.volumes[2]]
     assert s1.forward_volume == model.volumes[1]
     assert s1.reverse_volume == model.volumes[2]
 
@@ -166,17 +166,17 @@ def test_compressed_coords(request, capfd):
     groups = dagmc.DAGModel(test_file).groups
 
     fuel_group = groups['mat:fuel']
-    v1 = fuel_group.get_volumes()[1]
+    v1 = fuel_group.volumes_by_id[1]
     print(v1)
 
     conn, coords = v1.get_triangle_conn_and_coords()
     uconn, ucoords = v1.get_triangle_conn_and_coords(compress=True)
 
-    for i in range(v1.num_triangles()):
+    for i in range(v1.num_triangles):
         assert (coords[conn[i]] == ucoords[uconn[i]]).all()
 
     conn_map, coords = v1.get_triangle_coordinate_mapping()
-    tris = v1.get_triangle_handles()
+    tris = v1.triangle_handles
     assert (conn_map[tris[0]].size == 3)
     assert (coords[conn_map[tris[0]]].size == 9)
 
@@ -189,10 +189,10 @@ def test_coords(request, capfd):
     group = groups['mat:fuel']
     conn, coords = group.get_triangle_conn_and_coords()
 
-    volume = next(iter(group.get_volumes().values()))
+    volume = next(iter(group.volumes))
     conn, coords = volume.get_triangle_conn_and_coords(compress=True)
 
-    surface = next(iter(volume.get_surfaces().values()))
+    surface = next(iter(volume.surfaces))
     conn, coords = surface.get_triangle_conn_and_coords(compress=True)
 
 
@@ -285,7 +285,7 @@ def test_delete(fuel_pin_model):
 
     # attempt an operation on the group
     with pytest.raises(AttributeError, match="has no attribute 'mb'"):
-        fuel_group.get_volumes()
+        fuel_group.volumes
 
     # ensure the group is no longer returned by the model
     assert 'mat:fuel' not in model.groups
@@ -351,8 +351,8 @@ def test_add_groups(request):
     groups = model.groups
 
     assert len(groups) == 5
-    assert [1, 2] == sorted(groups['mat:fuel'].get_volume_ids())
-    assert [6] == groups['mat:Graveyard'].get_volume_ids()
-    assert [3] == groups['mat:41'].get_volume_ids()
-    assert [27, 28, 29] == sorted(groups['boundary:Reflecting'].get_surface_ids())
-    assert [24, 25] == sorted(groups['boundary:Vacuum'].get_surface_ids())
+    assert [1, 2] == sorted(groups['mat:fuel'].volume_ids)
+    assert [6] == groups['mat:Graveyard'].volume_ids
+    assert [3] == groups['mat:41'].volume_ids
+    assert [27, 28, 29] == sorted(groups['boundary:Reflecting'].surface_ids)
+    assert [24, 25] == sorted(groups['boundary:Vacuum'].surface_ids)

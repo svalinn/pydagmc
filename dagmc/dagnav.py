@@ -260,7 +260,7 @@ class DAGSet:
         -------
         numpy.ndarray shape=(N, 3), dtype=np.uint64
         """
-        return self.model.mb.get_connectivity(self.get_triangle_handles()).reshape(-1, 3)
+        return self.model.mb.get_connectivity(self.triangle_handles).reshape(-1, 3)
 
     @property
     def triangle_coords(self):
@@ -270,7 +270,7 @@ class DAGSet:
         -------
         numpy.ndarray shape=(N, 3), dtype=np.float64
         """
-        conn = self.get_triangle_conn()
+        conn = self.triangle_conn
 
         return self.model.mb.get_coords(conn.flatten()).reshape(-1, 3)
 
@@ -294,7 +294,7 @@ class DAGSet:
         numpy.ndarray shape=(N, 3), dtype=np.uint64
         numpy.ndarray shape=(N, 3), dtype=np.float64
         """
-        conn = self.get_triangle_conn()
+        conn = self.triangle_conn
 
         if compress:
             # generate an array of unique coordinates to save space
@@ -327,11 +327,10 @@ class DAGSet:
         -------
         numpy.ndarray shape=(N, 3), dtype=np.uint64
         """
-        triangle_handles = self.get_triangle_handles()
         conn, coords = self.get_triangle_conn_and_coords(compress)
 
         # create a mapping from triangle EntityHandle to triangle index
-        tri_map = {eh: c for eh, c in zip(triangle_handles, conn)}
+        tri_map = {eh: c for eh, c in zip(self.triangle_handles, conn)}
         return tri_map, coords
 
     def delete(self):
@@ -401,7 +400,7 @@ class Surface(DAGSet):
     @property
     def num_triangles(self):
         """Returns the number of triangles in this surface"""
-        return len(self.get_triangle_handles())
+        return len(self.triangle_handles)
 
     def _get_triangle_sets(self):
         return [self]
@@ -473,16 +472,16 @@ class Volume(DAGSet):
     @property
     def num_triangles(self):
         """Returns the number of triangles in this volume"""
-        return sum([s.num_triangles() for s in self.get_surfaces().values()])
+        return sum([s.num_triangles for s in self.surfaces])
 
     def _get_triangle_sets(self):
-        return [s.handle for s in self.get_surfaces().values()]
+        return [s.handle for s in self.surfaces]
 
     @property
     def volume(self):
         """Returns the volume of the volume"""
         volume = 0.0
-        for surface in self.get_surfaces().values():
+        for surface in self.surfaces:
             conn, coords = surface.get_triangle_conn_and_coords()
             sum = 0.0
             for _conn in conn:
@@ -504,7 +503,7 @@ class Group(DAGSet):
 
     def __contains__(self, ent_set: DAGSet):
         return any(vol.handle == ent_set.handle for vol in chain(
-            self.get_volumes().values(), self.get_surfaces().values()))
+            self.volumes, self.surfaces))
 
     @property
     def name(self) -> Optional[str]:
@@ -531,7 +530,7 @@ class Group(DAGSet):
         """Return any sets containing triangles"""
         output = set()
         output.update(self._get_geom_ent_sets('Surfaces'))
-        for v in self.get_volumes().values():
+        for v in self.volumes:
             output.update(v._get_triangle_sets())
         return list(output)
 
@@ -586,12 +585,12 @@ class Group(DAGSet):
     def __repr__(self):
         out = f'Group {self.id}, Name: {self.name}\n'
 
-        vol_ids = self.get_volume_ids()
+        vol_ids = self.volume_ids
         if vol_ids.size:
             out += 'Volume IDs:\n'
             out += f'{vol_ids}\n'
 
-        surf_ids = self.get_surface_ids()
+        surf_ids = self.surface_ids
         if surf_ids.size:
             out += 'Surface IDs:\n'
             out += f'{surf_ids}\n'
