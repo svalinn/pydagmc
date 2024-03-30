@@ -18,6 +18,11 @@ class DAGModel:
             self.mb = core.Core()
             self.mb.load_file(moab_file)
 
+        self.used_vol_ids = set(self.volumes_by_id.keys())
+        self.used_surf_ids = set(self.surfaces_by_id.keys())
+        self.used_grp_ids = set(group.id for group in self.groups.values())
+        self.used_grp_names = set(self.groups.keys())
+
     def _sets_by_category(self, set_type : str):
         """Return all sets of a given type"""
         return self.mb.get_entities_by_type_and_tag(self.mb.get_root_set(), types.MBENTITYSET, [self.category_tag], [set_type])
@@ -128,6 +133,11 @@ class DAGModel:
             of DAGSet objects or DAGSet ID numbers.
         """
         for (group_name, group_id), dagsets in group_map.items():
+            if group_name in self.used_grp_names:
+                raise ValueError(f'Group {group_name} is already used in model.')
+            else:
+                self.used_grp_names.add(group_name)
+
             group = Group.create(self, name=group_name, group_id=group_id)
 
             for dagset in dagsets:
@@ -204,6 +214,25 @@ class DAGSet:
     @id.setter
     def id(self, i: int):
         """Set the DAGMC set's ID."""
+        if self._geom_dimension == 4:
+            if i in self.model.used_grp_ids:
+                raise ValueError(f'Group ID {i} is already in use in this model.')
+            else:
+                self.model.used_grp_ids.discard(self.id)
+                self.model.used_grp_ids.add(i)
+        if self._geom_dimension == 3:
+            if i in self.model.used_vol_ids:
+                raise ValueError(f'Volume ID {i} is already in use in this model.')
+            else:
+                self.model.used_vol_ids.discard(self.id)
+                self.model.used_vol_ids.add(i)
+        elif self._geom_dimension == 2:
+            if i in self.model.used_surf_ids:
+                raise ValueError(f'Surface ID {i} is already in use in this model.')
+            else:
+                self.model.used_surf_ids.discard(self.id)
+                self.model.used_surf_ids.add(i)
+
         self._tag_set_data(self.model.id_tag, i)
 
     @property
@@ -515,7 +544,12 @@ class Group(DAGSet):
 
     @name.setter
     def name(self, val: str):
+        if val in self.model.used_grp_names:
+            raise ValueError(f'Group {val} already used in model.')
+
         self.model.mb.tag_set_data(self.model.name_tag, self.handle, val)
+        self.model.used_grp_names.discard(self.name)
+        self.model.used_grp_names.add(val)
 
     def _get_geom_ent_by_id(self, entity_type, id):
         category_ents = self.model.mb.get_entities_by_type_and_tag(self.handle, types.MBENTITYSET, [self.model.category_tag], [entity_type])
