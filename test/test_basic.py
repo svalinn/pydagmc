@@ -117,7 +117,7 @@ def test_volume(request):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
     model = dagmc.DAGModel(test_file)
 
-    v1 = model.volumes[1]
+    v1 = model.volumes_by_id[1]
     assert v1.material == 'fuel'
     assert v1 in model.groups['mat:fuel']
 
@@ -145,12 +145,25 @@ def test_surface(request):
     assert s1.reverse_volume == model.volumes_by_id[1]
     assert s1.surf_sense == [model.volumes_by_id[3], model.volumes_by_id[1]]
 
+def test_id_safety(request):
+    test_file = str(request.path.parent / 'fuel_pin.h5m')
+    model = dagmc.DAGModel(test_file)
+
+    v1 = model.volumes_by_id[1]
+
+    used_vol_id = 2
+    with pytest.raises(ValueError, match="already"):
+        v1.id = used_vol_id
+    
+    safe_vol_id = 9876
+    v1.id = safe_vol_id
+    assert v1.id == safe_vol_id
+
 
 def test_hash(request):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
     model = dagmc.DAGModel(test_file)
 
-    s = set(model.volumes)
     d = {group: group.name for group in model.groups.values()}
 
     # check that an entry for the same volume with a different model can be entered
@@ -294,7 +307,7 @@ def test_delete(fuel_pin_model):
 def test_write(request, tmpdir):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
     model = dagmc.DAGModel(test_file)
-    model.volumes[1].id = 12345
+    model.volumes_by_id[1].id = 12345
     model.write_file('fuel_pin_copy.h5m')
 
     model = dagmc.DAGModel('fuel_pin_copy.h5m')
@@ -307,9 +320,9 @@ def test_volume(request):
     exp_vols = {1: np.pi * 7**2 * 40,
                 2: np.pi * (9**2 - 7**2) * 40,
                 3: np.pi * (10**2 - 9**2) * 40,}
-    pytest.approx(model.volumes[1].volume, exp_vols[1])
-    pytest.approx(model.volumes[2].volume, exp_vols[2])
-    pytest.approx(model.volumes[3].volume, exp_vols[3])
+    pytest.approx(model.volumes_by_id[1].volume, exp_vols[1])
+    pytest.approx(model.volumes_by_id[2].volume, exp_vols[2])
+    pytest.approx(model.volumes_by_id[3].volume, exp_vols[3])
 
 
 def test_area(request):
