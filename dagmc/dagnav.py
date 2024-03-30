@@ -24,13 +24,19 @@ class DAGModel:
 
     @property
     def surfaces(self):
-        surfaces = [Surface(self, h) for h in self._sets_by_category('Surface')]
-        return {s.id: s for s in surfaces}
+        return [Surface(self, h) for h in self._sets_by_category('Surface')]
+    
+    @property
+    def surfaces_by_id(self):
+        return {s.id: s for s in self.surfaces}
 
     @property
     def volumes(self):
-        volumes = [Volume(self, h) for h in self._sets_by_category('Volume')]
-        return {v.id: v for v in volumes}
+        return [Volume(self, h) for h in self._sets_by_category('Volume')]
+
+    @property
+    def volumes_by_id(self):
+        return {v.id: v for v in self.volumes}
 
     @property
     def groups(self) -> Dict[str, Group]:
@@ -236,7 +242,8 @@ class DAGSet:
             filename += '.vtk'
         self.model.mb.write_file(filename, output_sets=[self.handle])
 
-    def get_triangle_handles(self):
+    @property
+    def triangle_handles(self):
         """Returns a pymoab.rng.Range of all triangle handles under this set.
         """
         r = rng.Range()
@@ -245,7 +252,8 @@ class DAGSet:
             r.merge(self.model.mb.get_entities_by_type(handle, types.MBTRI))
         return r
 
-    def get_triangle_conn(self):
+    @property
+    def triangle_conn(self):
         """Returns the triangle connectivity for all triangles under this set.
 
         Returns
@@ -254,7 +262,8 @@ class DAGSet:
         """
         return self.model.mb.get_connectivity(self.get_triangle_handles()).reshape(-1, 3)
 
-    def get_triangle_coords(self):
+    @property
+    def triangle_coords(self):
         """Returns the triangle coordinates for all triangles under this set.
 
         Returns
@@ -383,11 +392,13 @@ class Surface(DAGSet):
     def reverse_volume(self, volume: Volume):
         self.surf_sense = [self.forward_volume, volume]
 
-    def get_volumes(self) -> list[Volume]:
+    @property
+    def volumes(self) -> list[Volume]:
         """Get the parent volumes of this surface.
         """
         return [Volume(self.model, h) for h in self.model.mb.get_parent_meshsets(self.handle)]
 
+    @property
     def num_triangles(self):
         """Returns the number of triangles in this surface"""
         return len(self.get_triangle_handles())
@@ -450,11 +461,16 @@ class Volume(DAGSet):
             new_group = Group.create(self.model, name=f"mat:{name}", group_id=group_id)
             new_group.add_set(self)
 
-    def get_surfaces(self):
+    @property
+    def surfaces(self):
         """Returns surface objects for all surfaces making up this vollume"""
-        surfs = [Surface(self.model, h) for h in self.model.mb.get_child_meshsets(self.handle)]
-        return {s.id: s for s in surfs}
+        return [Surface(self.model, h) for h in self.model.mb.get_child_meshsets(self.handle)]
+    
+    @property
+    def surfaces_by_id(self):
+        return {s.id: s for s in self.surfaces}
 
+    @property
     def num_triangles(self):
         """Returns the number of triangles in this volume"""
         return sum([s.num_triangles() for s in self.get_surfaces().values()])
@@ -525,21 +541,31 @@ class Group(DAGSet):
     def _get_geom_ent_ids(self, entity_type):
         return self.model.mb.tag_get_data(self.model.id_tag, self._get_geom_ent_sets(entity_type), flat=True)
 
-    def get_volumes(self):
+    @property
+    def volumes(self):
         """Returns a list of Volume objects for the volumes contained by the group set."""
-        vols = [Volume(self.model, v) for v in self._get_geom_ent_sets('Volume')]
-        return {v.id: v for v in vols}
+        return [Volume(self.model, v) for v in self._get_geom_ent_sets('Volume')]
+    
+    @property
+    def volumes_by_id(self):
+        return {v.id: v for v in self.volumes}
 
-    def get_surfaces(self):
+    @property
+    def surfaces(self):
         """Returns a list of Surface objects for the surfaces contained by the group set."""
-        surfs = [Surface(self.model, s) for s in self._get_geom_ent_sets('Surface')]
-        return {s.id: s for s in surfs}
+        return [Surface(self.model, s) for s in self._get_geom_ent_sets('Surface')]
+    
+    @property
+    def surfaces_by_id(self):
+        return {s.id: s for s in self.surfaces}
 
-    def get_volume_ids(self):
+    @property
+    def volume_ids(self):
         """Returns a list of the contained Volume IDs"""
         return self._get_geom_ent_ids('Volume')
 
-    def get_surface_ids(self):
+    @property
+    def surface_ids(self):
         """Returns a lsit of the contained Surface IDs"""
         return self._get_geom_ent_ids('Surface')
 
