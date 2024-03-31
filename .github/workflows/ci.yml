@@ -47,7 +47,7 @@ jobs:
           cd ~
           git clone https://bitbucket.org/fathomteam/moab.git
           cd moab
-          git checkout 5.3.1
+          git checkout 5.5.1
           mkdir build
           cd build
           cmake -DENABLE_HDF5=ON -DENABLE_BLASLAPACK=OFF -DENABLE_PYMOAB=ON -DCMAKE_INSTALL_PREFIX=$HOME/opt -DCMAKE_BUILD_TYPE=Release ..
