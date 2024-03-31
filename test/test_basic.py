@@ -169,7 +169,7 @@ def test_id_safety(request):
     s1.id = safe_surf_id
     assert s1.id == safe_surf_id
 
-    g1 = groups['mat:fuel']
+    g1 = model.groups['mat:fuel']
 
     used_grp_id = 2
     with pytest.raises(ValueError, match="already"):
