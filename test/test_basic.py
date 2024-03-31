@@ -159,6 +159,27 @@ def test_id_safety(request):
     v1.id = safe_vol_id
     assert v1.id == safe_vol_id
 
+    s1 = model.surfaces_by_id[1]
+
+    used_surf_id = 2
+    with pytest.raises(ValueError, match="already"):
+        s1.id = used_surf_id
+    
+    safe_surf_id = 9876
+    s1.id = safe_surf_id
+    assert s1.id == safe_surf_id
+
+    g1 = groups['mat:fuel']
+
+    used_grp_id = 2
+    with pytest.raises(ValueError, match="already"):
+        g1.id = used_grp_id
+    
+    safe_grp_id = 9876
+    g1.id = safe_grp_id
+    assert g1.id == safe_grp_id
+
+
 
 def test_hash(request):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
