@@ -81,15 +81,13 @@ def test_group_merge(request):
 
     orig_group = groups['mat:fuel']
     orig_group_size = len(orig_group.volumes)
-    # create a new group with the same name as another group
+    # try tp create a new group with the same name as another group
     new_group = dagmc.Group.create(model, 'mat:fuel')
-    assert orig_group != new_group
+    assert orig_group == new_group
 
     # check that we can update a set ID
-    assert new_group.id == -1
     new_group.id = 100
     assert new_group.id == 100
-
 
     # merge the new group into the existing group
     orig_group.merge(new_group)
@@ -102,7 +100,7 @@ def test_group_merge(request):
     for vol in model.volumes:
         new_group.add_set(vol)
 
-    assert orig_group != new_group
+    assert orig_group == new_group
     assert len((new_group.volume_ids)) == len(model.volumes)
 
     # now get the groups again
@@ -373,11 +371,11 @@ def test_add_groups(request):
 
     assert len(model.groups) == 0
 
-    group_map = {("mat:fuel", 1): [1, 2],
-                 ("mat:Graveyard", 0): [volumes[6]],
-                 ("mat:41", 2): [3],
-                 ("boundary:Reflecting", 3): [27, 28, 29],
-                 ("boundary:Vacuum", 4): [surfaces[24], surfaces[25]]
+    group_map = {("mat:fuel", 10): [1, 2],
+                 ("mat:Graveyard", 50): [volumes[6]],
+                 ("mat:41", 20): [3],
+                 ("boundary:Reflecting", 30): [27, 28, 29],
+                 ("boundary:Vacuum", 40): [surfaces[24], surfaces[25]]
                  }
 
     model.add_groups(group_map)

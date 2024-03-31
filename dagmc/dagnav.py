@@ -18,10 +18,10 @@ class DAGModel:
             self.mb = core.Core()
             self.mb.load_file(moab_file)
 
-        self.used_vol_ids = set(self.volumes_by_id.keys())
-        self.used_surf_ids = set(self.surfaces_by_id.keys())
-        self.used_grp_ids = set(group.id for group in self.groups.values())
-        self.used_grp_names = set(self.groups.keys())
+        self.used_ids = {}
+        self.used_ids[Surface._geom_dimension] = set(self.surfaces_by_id.keys())
+        self.used_ids[Volume._geom_dimension] = set(self.volumes_by_id.keys())
+        self.used_ids[Group._geom_dimension] = set(group.id for group in self.groups.values())
 
     def _sets_by_category(self, set_type : str):
         """Return all sets of a given type"""
@@ -56,8 +56,12 @@ class DAGModel:
             if group_name in group_mapping:
                 group_mapping[group_name].merge(group)
                 continue
-            group_mapping[group_name] = Group(self, group_handle)
+            group_mapping[group_name] = group
         return group_mapping
+
+    @property
+    def group_names(self) -> list[str]:
+        return [group.name.lower() for group in self.groups.values() if group.name]
 
     def __repr__(self):
         return f'{type(self).__name__} {self.id}, {self.num_triangles} triangles'
@@ -133,11 +137,7 @@ class DAGModel:
             of DAGSet objects or DAGSet ID numbers.
         """
         for (group_name, group_id), dagsets in group_map.items():
-            if group_name in self.used_grp_names:
-                raise ValueError(f'Group {group_name} is already used in model.')
-            else:
-                self.used_grp_names.add(group_name)
-
+            # create a new group or get an existing group
             group = Group.create(self, name=group_name, group_id=group_id)
 
             for dagset in dagsets:
@@ -214,24 +214,11 @@ class DAGSet:
     @id.setter
     def id(self, i: int):
         """Set the DAGMC set's ID."""
-        if self._geom_dimension == 4:
-            if i in self.model.used_grp_ids:
-                raise ValueError(f'Group ID {i} is already in use in this model.')
-            else:
-                self.model.used_grp_ids.discard(self.id)
-                self.model.used_grp_ids.add(i)
-        if self._geom_dimension == 3:
-            if i in self.model.used_vol_ids:
-                raise ValueError(f'Volume ID {i} is already in use in this model.')
-            else:
-                self.model.used_vol_ids.discard(self.id)
-                self.model.used_vol_ids.add(i)
-        elif self._geom_dimension == 2:
-            if i in self.model.used_surf_ids:
-                raise ValueError(f'Surface ID {i} is already in use in this model.')
-            else:
-                self.model.used_surf_ids.discard(self.id)
-                self.model.used_surf_ids.add(i)
+        if i in self.model.used_ids[self.geom_dimension]:
+            raise ValueError(f'{self.category} ID {i} is already in use in this model.')
+        else:
+            self.model.used_ids[self.geom_dimension].discard(self.id)
+            self.model.used_ids[self.geom_dimension].add(i)
 
         self._tag_set_data(self.model.id_tag, i)
 
@@ -459,35 +446,31 @@ class Volume(DAGSet):
         """Get list of groups containing this volume."""
         return [group for group in self.model.groups.values() if self in group]
 
+    def _material_group(self):
+        for group in self.groups:
+            if self in group and group.name.startswith("mat:"):
+                return group
+        return None
+    
     @property
     def material(self) -> Optional[str]:
         """Name of the material assigned to this volume."""
-        for group in self.groups:
-            if self in group and group.name.startswith("mat:"):
-                return group.name[4:]
+        group = self._material_group
+        if group is not None:
+            return group.name[4:]
         return None
 
     @material.setter
     def material(self, name: str):
-        existing_group = False
-        for group in self.model.groups.values():
-            if f"mat:{name}" == group.name:
-                # Add volume to group matching specified name, unless the volume
-                # is already in it
-                if self in group:
-                    return
-                group.add_set(self)
-                existing_group = True
+        group = self._material_group
 
-            elif self in group and group.name.startswith("mat:"):
-                # Remove volume from existing group
-                group.remove_set(self)
+        if group is not None:
+            # Remove volume from existing group
+            group.remove_set(self)
 
-        if not existing_group:
-            # Create new group and add entity
-            group_id = max((g.id for g in self.model.groups.values()), default=0) + 1
-            new_group = Group.create(self.model, name=f"mat:{name}", group_id=group_id)
-            new_group.add_set(self)
+        # create a new group or ge an existing group
+        group = Group.create(self.model, name=f"mat:{name}")
+        group.add_set(self)
 
     @property
     def surfaces(self):
@@ -544,12 +527,10 @@ class Group(DAGSet):
 
     @name.setter
     def name(self, val: str):
-        if val in self.model.used_grp_names:
+        if val.lower() in self.model.group_names:
             raise ValueError(f'Group {val} already used in model.')
 
         self.model.mb.tag_set_data(self.model.name_tag, self.handle, val)
-        self.model.used_grp_names.discard(self.name)
-        self.model.used_grp_names.add(val)
 
     def _get_geom_ent_by_id(self, entity_type, id):
         category_ents = self.model.mb.get_entities_by_type_and_tag(self.handle, types.MBENTITYSET, [self.model.category_tag], [entity_type])
@@ -648,16 +629,28 @@ class Group(DAGSet):
 
     @classmethod
     def create(cls, model: DAGModel, name: Optional[str] = None, group_id: Optional[int] = None) -> Group:
-        """Create a new group instance with the given name"""
+        """Create a new group instance with the given name, 
+        or return an existing group if one exists."""
+
+        # return existing group if one exists with this name
+        if name is not None:
+            if name.lower() in model.group_names:
+                return model.groups[name]
+
         # add necessary tags for this meshset to be identified as a group
         ent_set = DAGSet(model, model.mb.create_meshset())
         ent_set.category = cls._category
         ent_set.geom_dimension = cls._geom_dimension
-        if group_id is not None:
-            ent_set.id = group_id
 
         # Now that entity set has proper tags, create Group, assign name, and return
         group = cls(model, ent_set.handle)
+
+        if group_id is None:
+            group_id = max((grp.id for grp in model.groups.values()), default=0) + 1
+
+        group.id = group_id
+
         if name is not None:
             group.name = name
+
         return group
