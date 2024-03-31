@@ -468,7 +468,7 @@ class Volume(DAGSet):
             # Remove volume from existing group
             group.remove_set(self)
 
-        # create a new group or ge an existing group
+        # create a new group or get an existing group
         group = Group.create(self.model, name=f"mat:{name}")
         group.add_set(self)
 
