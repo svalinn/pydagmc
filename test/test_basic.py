@@ -81,7 +81,7 @@ def test_group_merge(request):
 
     orig_group = groups['mat:fuel']
     orig_group_size = len(orig_group.volumes)
-    # try tp create a new group with the same name as another group
+    # try to create a new group with the same name as another group
     new_group = dagmc.Group.create(model, 'mat:fuel')
     assert orig_group == new_group
 
