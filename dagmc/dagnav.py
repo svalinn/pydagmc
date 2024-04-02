@@ -19,9 +19,9 @@ class DAGModel:
             self.mb.load_file(moab_file)
 
         self.used_ids = {}
-        self.used_ids[Surface._geom_dimension] = set(self.surfaces_by_id.keys())
-        self.used_ids[Volume._geom_dimension] = set(self.volumes_by_id.keys())
-        self.used_ids[Group._geom_dimension] = set(group.id for group in self.groups.values())
+        self.used_ids[Surface] = set(self.surfaces_by_id.keys())
+        self.used_ids[Volume] = set(self.volumes_by_id.keys())
+        self.used_ids[Group] = set(group.id for group in self.groups)
 
     def _sets_by_category(self, set_type : str):
         """Return all sets of a given type"""
@@ -44,7 +44,11 @@ class DAGModel:
         return {v.id: v for v in self.volumes}
 
     @property
-    def groups(self) -> Dict[str, Group]:
+    def groups(self):
+        return self.groups_by_name.values()
+
+    @property
+    def groups_by_name(self) -> Dict[str, Group]:
         group_handles = self._sets_by_category('Group')
 
         group_mapping = {}
@@ -61,7 +65,7 @@ class DAGModel:
 
     @property
     def group_names(self) -> list[str]:
-        return [group.name.lower() for group in self.groups.values() if group.name]
+        return self.groups_by_name.keys()
 
     def __repr__(self):
         return f'{type(self).__name__} {self.id}, {self.num_triangles} triangles'
@@ -214,11 +218,11 @@ class DAGSet:
     @id.setter
     def id(self, i: int):
         """Set the DAGMC set's ID."""
-        if i in self.model.used_ids[self.geom_dimension]:
+        if i in self.model.used_ids[type(self)]:
             raise ValueError(f'{self.category} ID {i} is already in use in this model.')
         else:
-            self.model.used_ids[self.geom_dimension].discard(self.id)
-            self.model.used_ids[self.geom_dimension].add(i)
+            self.model.used_ids[type(self)].discard(self.id)
+            self.model.used_ids[type(self)].add(i)
 
         self._tag_set_data(self.model.id_tag, i)
 
@@ -444,11 +448,11 @@ class Volume(DAGSet):
     @property
     def groups(self) -> list[Group]:
         """Get list of groups containing this volume."""
-        return [group for group in self.model.groups.values() if self in group]
+        return [group for group in self.model.groups if self in group]
 
     def _material_group(self):
         for group in self.groups:
-            if self in group and group.name.startswith("mat:"):
+            if "mat:" in group.name:
                 return group
         return None
     
@@ -635,7 +639,7 @@ class Group(DAGSet):
         # return existing group if one exists with this name
         if name is not None:
             if name.lower() in model.group_names:
-                return model.groups[name]
+                return model.groups_by_name[name]
 
         # add necessary tags for this meshset to be identified as a group
         ent_set = DAGSet(model, model.mb.create_meshset())
@@ -646,7 +650,7 @@ class Group(DAGSet):
         group = cls(model, ent_set.handle)
 
         if group_id is None:
-            group_id = max((grp.id for grp in model.groups.values()), default=0) + 1
+            group_id = max((grp.id for grp in model.groups), default=0) + 1
 
         group.id = group_id
 
