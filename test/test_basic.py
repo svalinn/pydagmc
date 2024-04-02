@@ -38,7 +38,7 @@ def fuel_pin_model(request):
 
 def test_basic_functionality(request, capfd):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
-    groups = dagmc.DAGModel(test_file).groups
+    groups = dagmc.DAGModel(test_file).groups_by_name
 
     print(groups)
 
@@ -77,7 +77,7 @@ def test_basic_functionality(request, capfd):
 def test_group_merge(request):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
     model = dagmc.DAGModel(test_file)
-    groups = model.groups
+    groups = model.groups_by_name
 
     orig_group = groups['mat:fuel']
     orig_group_size = len(orig_group.volumes)
@@ -104,7 +104,7 @@ def test_group_merge(request):
     assert len((new_group.volume_ids)) == len(model.volumes)
 
     # now get the groups again
-    groups = model.groups
+    groups = model.groups_by_name
     # the group named 'mat:fuel' should contain the additional
     # volume set w/ ID 3 now
     fuel_group = groups['mat:fuel']
@@ -117,13 +117,13 @@ def test_volume(request):
 
     v1 = model.volumes_by_id[1]
     assert v1.material == 'fuel'
-    assert v1 in model.groups['mat:fuel']
+    assert v1 in model.groups_by_name['mat:fuel']
 
     v1.material = 'olive oil'
     assert v1.material == 'olive oil'
     assert 'mat:olive oil' in model.groups
-    assert v1 in model.groups['mat:olive oil']
-    assert v1 not in model.groups['mat:fuel']
+    assert v1 in model.groups_by_name['mat:olive oil']
+    assert v1 not in model.groups_by_name['mat:fuel']
 
 
 def test_surface(request):
@@ -167,7 +167,7 @@ def test_id_safety(request):
     s1.id = safe_surf_id
     assert s1.id == safe_surf_id
 
-    g1 = model.groups['mat:fuel']
+    g1 = model.groups_by_name['mat:fuel']
 
     used_grp_id = 2
     with pytest.raises(ValueError, match="already"):
@@ -183,19 +183,19 @@ def test_hash(request):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
     model = dagmc.DAGModel(test_file)
 
-    d = {group: group.name for group in model.groups.values()}
+    d = {group: group.name for group in model.groups}
 
     # check that an entry for the same volume with a different model can be entered
     # into the dict
     model1 = dagmc.DAGModel(test_file)
 
-    d.update({group: group.name for group in model1.groups.values()})
+    d.update({group: group.name for group in model1.groups})
 
     assert len(d) == len(model.groups) + len(model1.groups)
 
 def test_compressed_coords(request, capfd):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
-    groups = dagmc.DAGModel(test_file).groups
+    groups = dagmc.DAGModel(test_file).groups_by_name
 
     fuel_group = groups['mat:fuel']
     v1 = fuel_group.volumes_by_id[1]
@@ -216,7 +216,7 @@ def test_compressed_coords(request, capfd):
 def test_coords(request, capfd):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
     model = dagmc.DAGModel(test_file)
-    groups = model.groups
+    groups = model.groups_by_name
 
     group = groups['mat:fuel']
     conn, coords = group.get_triangle_conn_and_coords()
@@ -230,7 +230,7 @@ def test_coords(request, capfd):
 
 def test_to_vtk(tmpdir_factory, request):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
-    groups = dagmc.DAGModel(test_file).groups
+    groups = dagmc.DAGModel(test_file).groups_by_name
 
     fuel_group = groups['mat:fuel']
 
@@ -312,7 +312,7 @@ def test_eq(request):
 def test_delete(fuel_pin_model):
     model = dagmc.DAGModel(fuel_pin_model)
 
-    fuel_group = model.groups['mat:fuel']
+    fuel_group = model.groups_by_name['mat:fuel']
     fuel_group.delete()
 
     # attempt an operation on the group
@@ -320,7 +320,7 @@ def test_delete(fuel_pin_model):
         fuel_group.volumes
 
     # ensure the group is no longer returned by the model
-    assert 'mat:fuel' not in model.groups
+    assert 'mat:fuel' not in model.groups_by_name
 
 
 def test_write(request, tmpdir):
@@ -366,7 +366,7 @@ def test_add_groups(request):
     volumes = model.volumes_by_id
     surfaces = model.surfaces_by_id
 
-    for group in model.groups.values():
+    for group in model.groups:
         group.delete()
 
     assert len(model.groups) == 0
@@ -380,7 +380,7 @@ def test_add_groups(request):
 
     model.add_groups(group_map)
 
-    groups = model.groups
+    groups = model.groups_by_name
 
     assert len(groups) == 5
     assert [1, 2] == sorted(groups['mat:fuel'].volume_ids)
