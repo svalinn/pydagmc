@@ -21,11 +21,12 @@ import dagmc
 
 model = dagmc.DAGModel('dagmc.h5m')
 
-print(model.groups)
+group_dict = model.groups_by_name
+print(group_dict)
 
 fuel_group = groups['mat:fuel']
 
-v1 = fuel_group.get_volumes()[1]
+v1 = fuel_group.volumes_by_id[1]
 
 print(v1)
 
@@ -60,11 +61,11 @@ Code:
 
 ```python
 # move volume 1 from the fuel group to the group "mat:41"
-groups['mat:fuel'].remove_set(v1)
-groups['mat:41'].add_set(v1)
+group_dict['mat:fuel'].remove_set(v1)
+group_dict['mat:41'].add_set(v1)
 
-print(groups['mat:fuel'])
-print(groups['mat:41'])
+print(group_dict['mat:fuel'])
+print(group_dict['mat:41'])
 ```
 
 Output:
