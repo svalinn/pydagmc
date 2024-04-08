@@ -18,22 +18,37 @@ class DAGModel:
             self.mb = core.Core()
             self.mb.load_file(moab_file)
 
+        self.used_ids = {}
+        self.used_ids[Surface] = set(self.surfaces_by_id.keys())
+        self.used_ids[Volume] = set(self.volumes_by_id.keys())
+        self.used_ids[Group] = set(group.id for group in self.groups)
+
     def _sets_by_category(self, set_type : str):
         """Return all sets of a given type"""
         return self.mb.get_entities_by_type_and_tag(self.mb.get_root_set(), types.MBENTITYSET, [self.category_tag], [set_type])
 
     @property
     def surfaces(self):
-        surfaces = [Surface(self, h) for h in self._sets_by_category('Surface')]
-        return {s.id: s for s in surfaces}
+        return [Surface(self, h) for h in self._sets_by_category('Surface')]
+    
+    @property
+    def surfaces_by_id(self):
+        return {s.id: s for s in self.surfaces}
 
     @property
     def volumes(self):
-        volumes = [Volume(self, h) for h in self._sets_by_category('Volume')]
-        return {v.id: v for v in volumes}
+        return [Volume(self, h) for h in self._sets_by_category('Volume')]
 
     @property
-    def groups(self) -> Dict[str, Group]:
+    def volumes_by_id(self):
+        return {v.id: v for v in self.volumes}
+
+    @property
+    def groups(self):
+        return self.groups_by_name.values()
+
+    @property
+    def groups_by_name(self) -> Dict[str, Group]:
         group_handles = self._sets_by_category('Group')
 
         group_mapping = {}
@@ -45,11 +60,15 @@ class DAGModel:
             if group_name in group_mapping:
                 group_mapping[group_name].merge(group)
                 continue
-            group_mapping[group_name] = Group(self, group_handle)
+            group_mapping[group_name] = group
         return group_mapping
 
+    @property
+    def group_names(self) -> list[str]:
+        return self.groups_by_name.keys()
+
     def __repr__(self):
-        return f'{type(self).__name__} {self.id}, {self.num_triangles()} triangles'
+        return f'{type(self).__name__} {self.id}, {self.num_triangles} triangles'
 
     @cached_property
     def id_tag(self):
@@ -122,16 +141,17 @@ class DAGModel:
             of DAGSet objects or DAGSet ID numbers.
         """
         for (group_name, group_id), dagsets in group_map.items():
+            # create a new group or get an existing group
             group = Group.create(self, name=group_name, group_id=group_id)
 
             for dagset in dagsets:
                 if isinstance(dagset, DAGSet):
                     group.add_set(dagset)
                 else:
-                    if dagset in self.volumes:
-                        group.add_set(self.volumes[dagset])
-                    elif dagset in self.surfaces:
-                        group.add_set(self.surfaces[dagset])
+                    if dagset in self.volumes_by_id:
+                        group.add_set(self.volumes_by_id[dagset])
+                    elif dagset in self.surfaces_by_id:
+                        group.add_set(self.surfaces_by_id[dagset])
                     else:
                         raise ValueError(f"DAGSet ID={dagset} could not be "
                                          "found in model volumes or surfaces.")
@@ -182,7 +202,7 @@ class DAGSet:
         return hash((self.handle, id(self.model)))
 
     def __repr__(self):
-        return f'{type(self).__name__} {self.id}, {self.num_triangles()} triangles'
+        return f'{type(self).__name__} {self.id}, {self.num_triangles} triangles'
 
     def _tag_get_data(self, tag: tag.Tag):
         return self.model.mb.tag_get_data(tag, self.handle, flat=True)[0]
@@ -198,6 +218,12 @@ class DAGSet:
     @id.setter
     def id(self, i: int):
         """Set the DAGMC set's ID."""
+        if i in self.model.used_ids[type(self)]:
+            raise ValueError(f'{self.category} ID {i} is already in use in this model.')
+        else:
+            self.model.used_ids[type(self)].discard(self.id)
+            self.model.used_ids[type(self)].add(i)
+
         self._tag_set_data(self.model.id_tag, i)
 
     @property
@@ -236,7 +262,8 @@ class DAGSet:
             filename += '.vtk'
         self.model.mb.write_file(filename, output_sets=[self.handle])
 
-    def get_triangle_handles(self):
+    @property
+    def triangle_handles(self):
         """Returns a pymoab.rng.Range of all triangle handles under this set.
         """
         r = rng.Range()
@@ -245,23 +272,25 @@ class DAGSet:
             r.merge(self.model.mb.get_entities_by_type(handle, types.MBTRI))
         return r
 
-    def get_triangle_conn(self):
+    @property
+    def triangle_conn(self):
         """Returns the triangle connectivity for all triangles under this set.
 
         Returns
         -------
         numpy.ndarray shape=(N, 3), dtype=np.uint64
         """
-        return self.model.mb.get_connectivity(self.get_triangle_handles()).reshape(-1, 3)
+        return self.model.mb.get_connectivity(self.triangle_handles).reshape(-1, 3)
 
-    def get_triangle_coords(self):
+    @property
+    def triangle_coords(self):
         """Returns the triangle coordinates for all triangles under this set.
 
         Returns
         -------
         numpy.ndarray shape=(N, 3), dtype=np.float64
         """
-        conn = self.get_triangle_conn()
+        conn = self.triangle_conn
 
         return self.model.mb.get_coords(conn.flatten()).reshape(-1, 3)
 
@@ -285,7 +314,7 @@ class DAGSet:
         numpy.ndarray shape=(N, 3), dtype=np.uint64
         numpy.ndarray shape=(N, 3), dtype=np.float64
         """
-        conn = self.get_triangle_conn()
+        conn = self.triangle_conn
 
         if compress:
             # generate an array of unique coordinates to save space
@@ -318,11 +347,10 @@ class DAGSet:
         -------
         numpy.ndarray shape=(N, 3), dtype=np.uint64
         """
-        triangle_handles = self.get_triangle_handles()
         conn, coords = self.get_triangle_conn_and_coords(compress)
 
         # create a mapping from triangle EntityHandle to triangle index
-        tri_map = {eh: c for eh, c in zip(triangle_handles, conn)}
+        tri_map = {eh: c for eh, c in zip(self.triangle_handles, conn)}
         return tri_map, coords
 
     def delete(self):
@@ -383,14 +411,16 @@ class Surface(DAGSet):
     def reverse_volume(self, volume: Volume):
         self.surf_sense = [self.forward_volume, volume]
 
-    def get_volumes(self) -> list[Volume]:
+    @property
+    def volumes(self) -> list[Volume]:
         """Get the parent volumes of this surface.
         """
         return [Volume(self.model, h) for h in self.model.mb.get_parent_meshsets(self.handle)]
 
+    @property
     def num_triangles(self):
         """Returns the number of triangles in this surface"""
-        return len(self.get_triangle_handles())
+        return len(self.triangle_handles)
 
     def _get_triangle_sets(self):
         return [self]
@@ -418,55 +448,56 @@ class Volume(DAGSet):
     @property
     def groups(self) -> list[Group]:
         """Get list of groups containing this volume."""
-        return [group for group in self.model.groups.values() if self in group]
+        return [group for group in self.model.groups if self in group]
 
+    def _material_group(self):
+        for group in self.groups:
+            if "mat:" in group.name:
+                return group
+        return None
+    
     @property
     def material(self) -> Optional[str]:
         """Name of the material assigned to this volume."""
-        for group in self.groups:
-            if self in group and group.name.startswith("mat:"):
-                return group.name[4:]
+        group = self._material_group
+        if group is not None:
+            return group.name[4:]
         return None
 
     @material.setter
     def material(self, name: str):
-        existing_group = False
-        for group in self.model.groups.values():
-            if f"mat:{name}" == group.name:
-                # Add volume to group matching specified name, unless the volume
-                # is already in it
-                if self in group:
-                    return
-                group.add_set(self)
-                existing_group = True
+        group = self._material_group
 
-            elif self in group and group.name.startswith("mat:"):
-                # Remove volume from existing group
-                group.remove_set(self)
+        if group is not None:
+            # Remove volume from existing group
+            group.remove_set(self)
 
-        if not existing_group:
-            # Create new group and add entity
-            group_id = max((g.id for g in self.model.groups.values()), default=0) + 1
-            new_group = Group.create(self.model, name=f"mat:{name}", group_id=group_id)
-            new_group.add_set(self)
+        # create a new group or get an existing group
+        group = Group.create(self.model, name=f"mat:{name}")
+        group.add_set(self)
 
-    def get_surfaces(self):
+    @property
+    def surfaces(self):
         """Returns surface objects for all surfaces making up this vollume"""
-        surfs = [Surface(self.model, h) for h in self.model.mb.get_child_meshsets(self.handle)]
-        return {s.id: s for s in surfs}
+        return [Surface(self.model, h) for h in self.model.mb.get_child_meshsets(self.handle)]
+    
+    @property
+    def surfaces_by_id(self):
+        return {s.id: s for s in self.surfaces}
 
+    @property
     def num_triangles(self):
         """Returns the number of triangles in this volume"""
-        return sum([s.num_triangles() for s in self.get_surfaces().values()])
+        return sum([s.num_triangles for s in self.surfaces])
 
     def _get_triangle_sets(self):
-        return [s.handle for s in self.get_surfaces().values()]
+        return [s.handle for s in self.surfaces]
 
     @property
     def volume(self):
         """Returns the volume of the volume"""
         volume = 0.0
-        for surface in self.get_surfaces().values():
+        for surface in self.surfaces:
             conn, coords = surface.get_triangle_conn_and_coords()
             sum = 0.0
             for _conn in conn:
@@ -488,7 +519,7 @@ class Group(DAGSet):
 
     def __contains__(self, ent_set: DAGSet):
         return any(vol.handle == ent_set.handle for vol in chain(
-            self.get_volumes().values(), self.get_surfaces().values()))
+            self.volumes, self.surfaces))
 
     @property
     def name(self) -> Optional[str]:
@@ -500,6 +531,9 @@ class Group(DAGSet):
 
     @name.setter
     def name(self, val: str):
+        if val.lower() in self.model.group_names:
+            raise ValueError(f'Group {val} already used in model.')
+
         self.model.mb.tag_set_data(self.model.name_tag, self.handle, val)
 
     def _get_geom_ent_by_id(self, entity_type, id):
@@ -515,7 +549,7 @@ class Group(DAGSet):
         """Return any sets containing triangles"""
         output = set()
         output.update(self._get_geom_ent_sets('Surfaces'))
-        for v in self.get_volumes().values():
+        for v in self.volumes:
             output.update(v._get_triangle_sets())
         return list(output)
 
@@ -525,21 +559,31 @@ class Group(DAGSet):
     def _get_geom_ent_ids(self, entity_type):
         return self.model.mb.tag_get_data(self.model.id_tag, self._get_geom_ent_sets(entity_type), flat=True)
 
-    def get_volumes(self):
+    @property
+    def volumes(self):
         """Returns a list of Volume objects for the volumes contained by the group set."""
-        vols = [Volume(self.model, v) for v in self._get_geom_ent_sets('Volume')]
-        return {v.id: v for v in vols}
+        return [Volume(self.model, v) for v in self._get_geom_ent_sets('Volume')]
+    
+    @property
+    def volumes_by_id(self):
+        return {v.id: v for v in self.volumes}
 
-    def get_surfaces(self):
+    @property
+    def surfaces(self):
         """Returns a list of Surface objects for the surfaces contained by the group set."""
-        surfs = [Surface(self.model, s) for s in self._get_geom_ent_sets('Surface')]
-        return {s.id: s for s in surfs}
+        return [Surface(self.model, s) for s in self._get_geom_ent_sets('Surface')]
+    
+    @property
+    def surfaces_by_id(self):
+        return {s.id: s for s in self.surfaces}
 
-    def get_volume_ids(self):
+    @property
+    def volume_ids(self):
         """Returns a list of the contained Volume IDs"""
         return self._get_geom_ent_ids('Volume')
 
-    def get_surface_ids(self):
+    @property
+    def surface_ids(self):
         """Returns a lsit of the contained Surface IDs"""
         return self._get_geom_ent_ids('Surface')
 
@@ -560,12 +604,12 @@ class Group(DAGSet):
     def __repr__(self):
         out = f'Group {self.id}, Name: {self.name}\n'
 
-        vol_ids = self.get_volume_ids()
+        vol_ids = self.volume_ids
         if vol_ids.size:
             out += 'Volume IDs:\n'
             out += f'{vol_ids}\n'
 
-        surf_ids = self.get_surface_ids()
+        surf_ids = self.surface_ids
         if surf_ids.size:
             out += 'Surface IDs:\n'
             out += f'{surf_ids}\n'
@@ -589,16 +633,28 @@ class Group(DAGSet):
 
     @classmethod
     def create(cls, model: DAGModel, name: Optional[str] = None, group_id: Optional[int] = None) -> Group:
-        """Create a new group instance with the given name"""
+        """Create a new group instance with the given name, 
+        or return an existing group if one exists."""
+
+        # return existing group if one exists with this name
+        if name is not None:
+            if name.lower() in model.group_names:
+                return model.groups_by_name[name]
+
         # add necessary tags for this meshset to be identified as a group
         ent_set = DAGSet(model, model.mb.create_meshset())
         ent_set.category = cls._category
         ent_set.geom_dimension = cls._geom_dimension
-        if group_id is not None:
-            ent_set.id = group_id
 
         # Now that entity set has proper tags, create Group, assign name, and return
         group = cls(model, ent_set.handle)
+
+        if group_id is None:
+            group_id = max((grp.id for grp in model.groups), default=0) + 1
+
+        group.id = group_id
+
         if name is not None:
             group.name = name
+
         return group

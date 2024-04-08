@@ -38,14 +38,14 @@ def fuel_pin_model(request):
 
 def test_basic_functionality(request, capfd):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
-    groups = dagmc.DAGModel(test_file).groups
+    groups = dagmc.DAGModel(test_file).groups_by_name
 
     print(groups)
 
     fuel_group = groups['mat:fuel']
     print(fuel_group)
 
-    v1 = fuel_group.get_volumes()[1]
+    v1 = fuel_group.volumes_by_id[1]
     print(v1)
 
     groups['mat:fuel'].remove_set(v1)
@@ -77,19 +77,17 @@ def test_basic_functionality(request, capfd):
 def test_group_merge(request):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
     model = dagmc.DAGModel(test_file)
-    groups = model.groups
+    groups = model.groups_by_name
 
     orig_group = groups['mat:fuel']
-    orig_group_size = len(orig_group.get_volumes())
-    # create a new group with the same name as another group
+    orig_group_size = len(orig_group.volumes)
+    # try to create a new group with the same name as another group
     new_group = dagmc.Group.create(model, 'mat:fuel')
-    assert orig_group != new_group
+    assert orig_group == new_group
 
     # check that we can update a set ID
-    assert new_group.id == -1
     new_group.id = 100
     assert new_group.id == 100
-
 
     # merge the new group into the existing group
     orig_group.merge(new_group)
@@ -99,84 +97,118 @@ def test_group_merge(request):
     new_group = dagmc.Group.create(model, 'mat:fuel')
 
     # add one of other volumes to the new set
-    for vol in model.volumes.values():
+    for vol in model.volumes:
         new_group.add_set(vol)
 
-    assert orig_group != new_group
-    assert len((new_group.get_volume_ids())) == len(model.volumes)
+    assert orig_group == new_group
+    assert len((new_group.volume_ids)) == len(model.volumes)
 
     # now get the groups again
-    groups = model.groups
+    groups = model.groups_by_name
     # the group named 'mat:fuel' should contain the additional
     # volume set w/ ID 3 now
     fuel_group = groups['mat:fuel']
-    assert 3 in fuel_group.get_volumes()
+    assert 3 in fuel_group.volumes_by_id
 
 
 def test_volume(request):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
     model = dagmc.DAGModel(test_file)
 
-    v1 = model.volumes[1]
+    v1 = model.volumes_by_id[1]
     assert v1.material == 'fuel'
-    assert v1 in model.groups['mat:fuel']
+    assert v1 in model.groups_by_name['mat:fuel']
 
     v1.material = 'olive oil'
     assert v1.material == 'olive oil'
     assert 'mat:olive oil' in model.groups
-    assert v1 in model.groups['mat:olive oil']
-    assert v1 not in model.groups['mat:fuel']
+    assert v1 in model.groups_by_name['mat:olive oil']
+    assert v1 not in model.groups_by_name['mat:fuel']
 
 
 def test_surface(request):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
     model = dagmc.DAGModel(test_file)
 
-    s1 = model.surfaces[1]
-    assert s1.get_volumes() == [model.volumes[1], model.volumes[2]]
-    assert s1.forward_volume == model.volumes[1]
-    assert s1.reverse_volume == model.volumes[2]
+    s1 = model.surfaces_by_id[1]
+    assert s1.volumes == [model.volumes_by_id[1], model.volumes_by_id[2]]
+    assert s1.forward_volume == model.volumes_by_id[1]
+    assert s1.reverse_volume == model.volumes_by_id[2]
 
-    s1.forward_volume = model.volumes[3]
-    assert s1.forward_volume == model.volumes[3]
-    assert s1.surf_sense == [model.volumes[3], model.volumes[2]]
+    s1.forward_volume = model.volumes_by_id[3]
+    assert s1.forward_volume == model.volumes_by_id[3]
+    assert s1.surf_sense == [model.volumes_by_id[3], model.volumes_by_id[2]]
 
-    s1.reverse_volume = model.volumes[1]
-    assert s1.reverse_volume == model.volumes[1]
-    assert s1.surf_sense == [model.volumes[3], model.volumes[1]]
+    s1.reverse_volume = model.volumes_by_id[1]
+    assert s1.reverse_volume == model.volumes_by_id[1]
+    assert s1.surf_sense == [model.volumes_by_id[3], model.volumes_by_id[1]]
+
+def test_id_safety(request):
+    test_file = str(request.path.parent / 'fuel_pin.h5m')
+    model = dagmc.DAGModel(test_file)
+
+    v1 = model.volumes_by_id[1]
+
+    used_vol_id = 2
+    with pytest.raises(ValueError, match="already"):
+        v1.id = used_vol_id
+    
+    safe_vol_id = 9876
+    v1.id = safe_vol_id
+    assert v1.id == safe_vol_id
+
+    s1 = model.surfaces_by_id[1]
+
+    used_surf_id = 2
+    with pytest.raises(ValueError, match="already"):
+        s1.id = used_surf_id
+    
+    safe_surf_id = 9876
+    s1.id = safe_surf_id
+    assert s1.id == safe_surf_id
+
+    g1 = model.groups_by_name['mat:fuel']
+
+    used_grp_id = 2
+    with pytest.raises(ValueError, match="already"):
+        g1.id = used_grp_id
+    
+    safe_grp_id = 9876
+    g1.id = safe_grp_id
+    assert g1.id == safe_grp_id
+
 
 
 def test_hash(request):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
     model = dagmc.DAGModel(test_file)
 
-    s = set(model.volumes)
-    d = {group: group.name for group in model.groups.values()}
+    d = {group: group.name for group in model.groups}
 
     # check that an entry for the same volume with a different model can be entered
     # into the dict
     model1 = dagmc.DAGModel(test_file)
 
-    d.update({group: group.name for group in model1.groups.values()})
+    d.update({group: group.name for group in model1.groups})
 
     assert len(d) == len(model.groups) + len(model1.groups)
 
 def test_compressed_coords(request, capfd):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
-    groups = dagmc.DAGModel(test_file).groups
+    groups = dagmc.DAGModel(test_file).groups_by_name
 
     fuel_group = groups['mat:fuel']
-    v1 = fuel_group.get_volumes()[1]
+    v1 = fuel_group.volumes_by_id[1]
     print(v1)
 
     conn, coords = v1.get_triangle_conn_and_coords()
     uconn, ucoords = v1.get_triangle_conn_and_coords(compress=True)
 
-    for i in range(v1.num_triangles()):
+    for i in range(v1.num_triangles):
         assert (coords[conn[i]] == ucoords[uconn[i]]).all()
 
     conn_map, coords = v1.get_triangle_coordinate_mapping()
-    tris = v1.get_triangle_handles()
+    tris = v1.triangle_handles
     assert (conn_map[tris[0]].size == 3)
     assert (coords[conn_map[tris[0]]].size == 9)
 
@@ -184,21 +216,21 @@ def test_compressed_coords(request, capfd):
 def test_coords(request, capfd):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
     model = dagmc.DAGModel(test_file)
-    groups = model.groups
+    groups = model.groups_by_name
 
     group = groups['mat:fuel']
     conn, coords = group.get_triangle_conn_and_coords()
 
-    volume = next(iter(group.get_volumes().values()))
+    volume = next(iter(group.volumes))
     conn, coords = volume.get_triangle_conn_and_coords(compress=True)
 
-    surface = next(iter(volume.get_surfaces().values()))
+    surface = next(iter(volume.surfaces))
     conn, coords = surface.get_triangle_conn_and_coords(compress=True)
 
 
 def test_to_vtk(tmpdir_factory, request):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
-    groups = dagmc.DAGModel(test_file).groups
+    groups = dagmc.DAGModel(test_file).groups_by_name
 
     fuel_group = groups['mat:fuel']
 
@@ -280,25 +312,25 @@ def test_eq(request):
 def test_delete(fuel_pin_model):
     model = dagmc.DAGModel(fuel_pin_model)
 
-    fuel_group = model.groups['mat:fuel']
+    fuel_group = model.groups_by_name['mat:fuel']
     fuel_group.delete()
 
     # attempt an operation on the group
     with pytest.raises(AttributeError, match="has no attribute 'mb'"):
-        fuel_group.get_volumes()
+        fuel_group.volumes
 
     # ensure the group is no longer returned by the model
-    assert 'mat:fuel' not in model.groups
+    assert 'mat:fuel' not in model.groups_by_name
 
 
 def test_write(request, tmpdir):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
     model = dagmc.DAGModel(test_file)
-    model.volumes[1].id = 12345
+    model.volumes_by_id[1].id = 12345
     model.write_file('fuel_pin_copy.h5m')
 
     model = dagmc.DAGModel('fuel_pin_copy.h5m')
-    assert 12345 in model.volumes
+    assert 12345 in model.volumes_by_id
 
 
 def test_volume(request):
@@ -307,9 +339,9 @@ def test_volume(request):
     exp_vols = {1: np.pi * 7**2 * 40,
                 2: np.pi * (9**2 - 7**2) * 40,
                 3: np.pi * (10**2 - 9**2) * 40,}
-    pytest.approx(model.volumes[1].volume, exp_vols[1])
-    pytest.approx(model.volumes[2].volume, exp_vols[2])
-    pytest.approx(model.volumes[3].volume, exp_vols[3])
+    pytest.approx(model.volumes_by_id[1].volume, exp_vols[1])
+    pytest.approx(model.volumes_by_id[2].volume, exp_vols[2])
+    pytest.approx(model.volumes_by_id[3].volume, exp_vols[3])
 
 
 def test_area(request):
@@ -331,28 +363,28 @@ def test_area(request):
 def test_add_groups(request):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
     model = dagmc.DAGModel(test_file)
-    volumes = model.volumes
-    surfaces = model.surfaces
+    volumes = model.volumes_by_id
+    surfaces = model.surfaces_by_id
 
-    for group in model.groups.values():
+    for group in model.groups:
         group.delete()
 
     assert len(model.groups) == 0
 
-    group_map = {("mat:fuel", 1): [1, 2],
-                 ("mat:Graveyard", 0): [volumes[6]],
-                 ("mat:41", 2): [3],
-                 ("boundary:Reflecting", 3): [27, 28, 29],
-                 ("boundary:Vacuum", 4): [surfaces[24], surfaces[25]]
+    group_map = {("mat:fuel", 10): [1, 2],
+                 ("mat:Graveyard", 50): [volumes[6]],
+                 ("mat:41", 20): [3],
+                 ("boundary:Reflecting", 30): [27, 28, 29],
+                 ("boundary:Vacuum", 40): [surfaces[24], surfaces[25]]
                  }
 
     model.add_groups(group_map)
 
-    groups = model.groups
+    groups = model.groups_by_name
 
     assert len(groups) == 5
-    assert [1, 2] == sorted(groups['mat:fuel'].get_volume_ids())
-    assert [6] == groups['mat:Graveyard'].get_volume_ids()
-    assert [3] == groups['mat:41'].get_volume_ids()
-    assert [27, 28, 29] == sorted(groups['boundary:Reflecting'].get_surface_ids())
-    assert [24, 25] == sorted(groups['boundary:Vacuum'].get_surface_ids())
+    assert [1, 2] == sorted(groups['mat:fuel'].volume_ids)
+    assert [6] == groups['mat:Graveyard'].volume_ids
+    assert [3] == groups['mat:41'].volume_ids
+    assert [27, 28, 29] == sorted(groups['boundary:Reflecting'].surface_ids)
+    assert [24, 25] == sorted(groups['boundary:Vacuum'].surface_ids)
