@@ -231,7 +231,9 @@ class DAGSet:
     @id.setter
     def id(self, i: int):
         """Set the DAGMC set's ID."""
-        if i in self.model.used_ids[type(self)]:
+        if i is None:
+            i = max(self.model.used_ids[type(self)], default=0) + 1
+        elif i in self.model.used_ids[type(self)]:
             raise ValueError(f'{self.category} ID {i} is already in use in this model.')
         else:
             self.model.used_ids[type(self)].discard(self.id)
@@ -677,9 +679,6 @@ class Group(DAGSet):
 
         # Now that entity set has proper tags, create Group, assign name, and return
         group = cls(model, ent_set.handle)
-
-        if group_id is None:
-            group_id = max((grp.id for grp in model.groups), default=0) + 1
 
         group.id = group_id
 
