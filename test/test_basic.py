@@ -195,6 +195,13 @@ def test_id_safety(request):
     s1.id = safe_surf_id
     assert s1.id == safe_surf_id
 
+    s2 = model.surfaces_by_id[2]
+    s2.id = None
+    assert s2.id == safe_surf_id + 1
+
+    s2.id = 2
+    assert s2.id == 2
+
     g1 = model.groups_by_name['mat:fuel']
 
     used_grp_id = 2
@@ -266,6 +273,8 @@ def test_coords(request, capfd):
 
 
 def test_to_vtk(tmpdir_factory, request):
+    pass
+
     test_file = str(request.path.parent / 'fuel_pin.h5m')
     groups = dagmc.DAGModel(test_file).groups_by_name
 

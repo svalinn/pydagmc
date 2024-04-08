@@ -235,9 +235,9 @@ class DAGSet:
             i = max(self.model.used_ids[type(self)], default=0) + 1
         elif i in self.model.used_ids[type(self)]:
             raise ValueError(f'{self.category} ID {i} is already in use in this model.')
-        else:
-            self.model.used_ids[type(self)].discard(self.id)
-            self.model.used_ids[type(self)].add(i)
+
+        self.model.used_ids[type(self)].discard(self.id)
+        self.model.used_ids[type(self)].add(i)
 
         self._tag_set_data(self.model.id_tag, i)
 
