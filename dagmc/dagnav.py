@@ -360,7 +360,7 @@ class DAGSet:
         self.model = None
 
     @classmethod
-    def create(cls, model: DAGModel, global_id: Optional[int] = None) -> Surface:
+    def create(cls, model: DAGModel, global_id: Optional[int] = None) -> DAGSet:
         """Create new set"""
         # Add necessary tags for this meshset to be identified appropriately
         ent_set = DAGSet(model, model.mb.create_meshset())
