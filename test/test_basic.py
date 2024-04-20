@@ -186,7 +186,7 @@ def test_id_safety(request):
     new_surf = dagmc.Surface.create(model, 100)
     assert isinstance(new_surf, dagmc.Surface)
     assert new_surf.id == 100
-    assert model.surfaces[100] == new_surf
+    assert model.surfaces_by_id[100] == new_surf
 
 
 def test_hash(request):

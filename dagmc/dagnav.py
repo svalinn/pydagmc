@@ -366,11 +366,11 @@ class DAGSet:
         ent_set = DAGSet(model, model.mb.create_meshset())
         ent_set.geom_dimension = cls._geom_dimension
         ent_set.category = cls._category
+        # Now that the entity set has proper tags, create derived class and return
+        out = cls(model, ent_set.handle)
         if global_id is not None:
-            ent_set.id = global_id
-
-        # Now that entity set has proper tags, create derived class and return
-        return cls(model, ent_set.handle)
+            out.id = global_id
+        return out
 
 
 class Surface(DAGSet):
