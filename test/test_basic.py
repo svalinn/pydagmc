@@ -121,9 +121,14 @@ def test_volume(request):
 
     v1.material = 'olive oil'
     assert v1.material == 'olive oil'
-    assert 'mat:olive oil' in model.groups
+    assert 'mat:olive oil' in model.groups_by_name
     assert v1 in model.groups_by_name['mat:olive oil']
     assert v1 not in model.groups_by_name['mat:fuel']
+
+    new_vol = dagmc.Volume.create(model, 100)
+    assert isinstance(new_vol, dagmc.Volume)
+    assert new_vol.id == 100
+    assert model.volumes_by_id[100] == new_vol
 
 
 def test_surface(request):
@@ -152,7 +157,7 @@ def test_id_safety(request):
     used_vol_id = 2
     with pytest.raises(ValueError, match="already"):
         v1.id = used_vol_id
-    
+
     safe_vol_id = 9876
     v1.id = safe_vol_id
     assert v1.id == safe_vol_id
@@ -162,7 +167,7 @@ def test_id_safety(request):
     used_surf_id = 2
     with pytest.raises(ValueError, match="already"):
         s1.id = used_surf_id
-    
+
     safe_surf_id = 9876
     s1.id = safe_surf_id
     assert s1.id == safe_surf_id
@@ -172,11 +177,16 @@ def test_id_safety(request):
     used_grp_id = 2
     with pytest.raises(ValueError, match="already"):
         g1.id = used_grp_id
-    
+
     safe_grp_id = 9876
     g1.id = safe_grp_id
     assert g1.id == safe_grp_id
 
+
+    new_surf = dagmc.Surface.create(model, 100)
+    assert isinstance(new_surf, dagmc.Surface)
+    assert new_surf.id == 100
+    assert model.surfaces_by_id[100] == new_surf
 
 
 def test_hash(request):
@@ -199,7 +209,6 @@ def test_compressed_coords(request, capfd):
 
     fuel_group = groups['mat:fuel']
     v1 = fuel_group.volumes_by_id[1]
-    print(v1)
 
     conn, coords = v1.get_triangle_conn_and_coords()
     uconn, ucoords = v1.get_triangle_conn_and_coords(compress=True)
@@ -333,7 +342,7 @@ def test_write(request, tmpdir):
     assert 12345 in model.volumes_by_id
 
 
-def test_volume(request):
+def test_volume_value(request):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
     model = dagmc.DAGModel(test_file)
     exp_vols = {1: np.pi * 7**2 * 40,
