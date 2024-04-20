@@ -30,7 +30,7 @@ class DAGModel:
     @property
     def surfaces(self):
         return [Surface(self, h) for h in self._sets_by_category('Surface')]
-    
+
     @property
     def surfaces_by_id(self):
         return {s.id: s for s in self.surfaces}
@@ -464,12 +464,13 @@ class Volume(DAGSet):
         """Get list of groups containing this volume."""
         return [group for group in self.model.groups if self in group]
 
+    @property
     def _material_group(self):
         for group in self.groups:
             if "mat:" in group.name:
                 return group
         return None
-    
+
     @property
     def material(self) -> Optional[str]:
         """Name of the material assigned to this volume."""
@@ -494,7 +495,7 @@ class Volume(DAGSet):
     def surfaces(self):
         """Returns surface objects for all surfaces making up this vollume"""
         return [Surface(self.model, h) for h in self.model.mb.get_child_meshsets(self.handle)]
-    
+
     @property
     def surfaces_by_id(self):
         return {s.id: s for s in self.surfaces}
@@ -578,7 +579,7 @@ class Group(DAGSet):
     def volumes(self):
         """Returns a list of Volume objects for the volumes contained by the group set."""
         return [Volume(self.model, v) for v in self._get_geom_ent_sets('Volume')]
-    
+
     @property
     def volumes_by_id(self):
         return {v.id: v for v in self.volumes}
@@ -587,7 +588,7 @@ class Group(DAGSet):
     def surfaces(self):
         """Returns a list of Surface objects for the surfaces contained by the group set."""
         return [Surface(self.model, s) for s in self._get_geom_ent_sets('Surface')]
-    
+
     @property
     def surfaces_by_id(self):
         return {s.id: s for s in self.surfaces}
@@ -648,7 +649,7 @@ class Group(DAGSet):
 
     @classmethod
     def create(cls, model: DAGModel, name: Optional[str] = None, group_id: Optional[int] = None) -> Group:
-        """Create a new group instance with the given name, 
+        """Create a new group instance with the given name,
         or return an existing group if one exists."""
 
         # return existing group if one exists with this name
