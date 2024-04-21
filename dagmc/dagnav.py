@@ -156,6 +156,19 @@ class DAGModel:
                         raise ValueError(f"DAGSet ID={dagset} could not be "
                                          "found in model volumes or surfaces.")
 
+    def create_group(self, name: Optional[str] = None, group_id: Optional[int] = None) -> Group:
+        """Create a new group instance with the given name,
+        or return an existing group if one exists."""
+        return Group.create(self, name, group_id)
+
+    def create_volume(self, global_id: Optional[int] = None) -> Volume:
+        """Create a new volume"""
+        return Volume.create(self, global_id)
+
+    def create_surface(self, global_id: Optional[int] = None) -> Surface:
+        """Create a new surface"""
+        return Surface.create(self, global_id)
+
 
 class DAGSet:
     """

@@ -100,6 +100,9 @@ def test_group_merge(request):
     for vol in model.volumes:
         new_group.add_set(vol)
 
+    # using create_group should give same thing
+    assert model.create_group('mat:fuel') == new_group
+
     assert orig_group == new_group
     assert len((new_group.volume_ids)) == len(model.volumes)
 
@@ -130,6 +133,10 @@ def test_volume(request):
     assert new_vol.id == 100
     assert model.volumes_by_id[100] == new_vol
 
+    new_vol2 = model.create_volume(200)
+    assert isinstance(new_vol2, dagmc.Volume)
+    assert new_vol2.id == 200
+    assert model.volumes_by_id[200] == new_vol2
 
 def test_surface(request):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
@@ -187,6 +194,11 @@ def test_id_safety(request):
     assert isinstance(new_surf, dagmc.Surface)
     assert new_surf.id == 100
     assert model.surfaces_by_id[100] == new_surf
+
+    new_surf2 = model.create_surface(200)
+    assert isinstance(new_surf2, dagmc.Surface)
+    assert new_surf2.id == 200
+    assert model.surfaces_by_id[200] == new_surf2
 
 
 def test_hash(request):
