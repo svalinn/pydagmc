@@ -178,6 +178,9 @@ class DAGSet:
         self.model = model
         self.handle = handle
 
+    def __del__(self):
+        self.model.used_ids[type(self)].discard(self.id)
+
     def _check_category_and_dimension(self):
         """Check for consistency of category and geom_dimension tags"""
         stype = self._category.lower()
@@ -383,8 +386,7 @@ class DAGSet:
         ent_set.category = cls._category
         # Now that the entity set has proper tags, create derived class and return
         out = cls(model, ent_set.handle)
-        if global_id is not None:
-            out.id = global_id
+        out.id = global_id
         return out
 
 
