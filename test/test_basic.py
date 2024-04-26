@@ -100,6 +100,9 @@ def test_group_merge(request):
     for vol in model.volumes:
         new_group.add_set(vol)
 
+    # using create_group should give same thing
+    assert model.create_group('mat:fuel') == new_group
+
     assert orig_group == new_group
     assert len((new_group.volume_ids)) == len(model.volumes)
 
@@ -109,6 +112,22 @@ def test_group_merge(request):
     # volume set w/ ID 3 now
     fuel_group = groups['mat:fuel']
     assert 3 in fuel_group.volumes_by_id
+
+
+def test_group_create(request):
+    test_file = str(request.path.parent / 'fuel_pin.h5m')
+    model = dagmc.DAGModel(test_file)
+    orig_num_groups = len(model.groups)
+
+    # Create two new groups
+    new_group1 = dagmc.Group.create(model, 'mat:slime')
+    new_group2 = model.create_group('mat:plastic')
+
+    assert 'mat:slime' in model.groups_by_name
+    assert 'mat:plastic' in model.groups_by_name
+    assert model.groups_by_name['mat:slime'] == new_group1
+    assert model.groups_by_name['mat:plastic'] == new_group2
+    assert len(model.groups) == orig_num_groups + 2
 
 
 def test_volume(request):
@@ -130,6 +149,10 @@ def test_volume(request):
     assert new_vol.id == 100
     assert model.volumes_by_id[100] == new_vol
 
+    new_vol2 = model.create_volume(200)
+    assert isinstance(new_vol2, dagmc.Volume)
+    assert new_vol2.id == 200
+    assert model.volumes_by_id[200] == new_vol2
 
 def test_surface(request):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
@@ -187,6 +210,11 @@ def test_id_safety(request):
     assert isinstance(new_surf, dagmc.Surface)
     assert new_surf.id == 100
     assert model.surfaces_by_id[100] == new_surf
+
+    new_surf2 = model.create_surface(200)
+    assert isinstance(new_surf2, dagmc.Surface)
+    assert new_surf2.id == 200
+    assert model.surfaces_by_id[200] == new_surf2
 
 
 def test_hash(request):
