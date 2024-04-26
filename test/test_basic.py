@@ -114,6 +114,22 @@ def test_group_merge(request):
     assert 3 in fuel_group.volumes_by_id
 
 
+def test_group_create(request):
+    test_file = str(request.path.parent / 'fuel_pin.h5m')
+    model = dagmc.DAGModel(test_file)
+    orig_num_groups = len(model.groups)
+
+    # Create two new groups
+    new_group1 = dagmc.Group.create(model, 'mat:slime')
+    new_group2 = model.create_group('mat:plastic')
+
+    assert 'mat:slime' in model.groups_by_name
+    assert 'mat:plastic' in model.groups_by_name
+    assert model.groups_by_name['mat:slime'] == new_group1
+    assert model.groups_by_name['mat:plastic'] == new_group2
+    assert len(model.groups) == orig_num_groups + 2
+
+
 def test_volume(request):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
     model = dagmc.DAGModel(test_file)
