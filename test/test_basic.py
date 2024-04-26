@@ -273,7 +273,6 @@ def test_coords(request, capfd):
 
 
 def test_to_vtk(tmpdir_factory, request):
-
     test_file = str(request.path.parent / 'fuel_pin.h5m')
     groups = dagmc.DAGModel(test_file).groups_by_name
 
