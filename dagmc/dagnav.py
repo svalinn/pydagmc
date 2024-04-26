@@ -157,16 +157,16 @@ class DAGModel:
                                          "found in model volumes or surfaces.")
 
     def create_group(self, name: Optional[str] = None, group_id: Optional[int] = None) -> Group:
-        """Create a new group instance with the given name,
+        """Create a new empty group instance with the given name,
         or return an existing group if one exists."""
         return Group.create(self, name, group_id)
 
     def create_volume(self, global_id: Optional[int] = None) -> Volume:
-        """Create a new volume"""
+        """Create a new empty volume set"""
         return Volume.create(self, global_id)
 
     def create_surface(self, global_id: Optional[int] = None) -> Surface:
-        """Create a new surface"""
+        """Create a new empty surface set"""
         return Surface.create(self, global_id)
 
 
