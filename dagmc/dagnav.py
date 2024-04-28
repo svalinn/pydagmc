@@ -178,9 +178,6 @@ class DAGSet:
         self.model = model
         self.handle = handle
 
-    def __del__(self):
-        self.model.used_ids[type(self)].discard(self.id)
-
     def _check_category_and_dimension(self):
         """Check for consistency of category and geom_dimension tags"""
         stype = self._category.lower()
@@ -372,7 +369,8 @@ class DAGSet:
         return tri_map, coords
 
     def delete(self):
-        """Delete this group from the DAGMC file."""
+        """Delete this set from the DAGMC file."""
+        self.model.used_ids[type(self)].discard(self.id)
         self.model.mb.delete_entity(self.handle)
         self.handle = None
         self.model = None
