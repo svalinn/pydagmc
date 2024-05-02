@@ -369,7 +369,11 @@ class DAGSet:
         return tri_map, coords
 
     def delete(self):
-        """Delete this set from the DAGMC file."""
+        """Delete this set from the MOAB database, but doesn't
+        delete this DAGSet object.  The object remains but no
+        longer refers to anything in the model.  In many cases, it may
+        make sense to delete this DAGSet object immediately following
+        this operation."""
         self.model.used_ids[type(self)].discard(self.id)
         self.model.mb.delete_entity(self.handle)
         self.handle = None
