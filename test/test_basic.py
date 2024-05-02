@@ -181,17 +181,24 @@ def test_id_safety(request):
     with pytest.raises(ValueError, match="already"):
         v1.id = used_vol_id
 
-    safe_vol_id = 101
+    # set volume 1 to a safe ID and ensure assignment was successful this
+    # assignment should free the original ID of 1 for use
+    safe_vol_id = 9876
     v1.id = safe_vol_id
     assert v1.id == safe_vol_id
 
+    # create a second volume and ensure it gets the next available ID
     v2 = dagmc.Volume.create(model)
     assert v2.id == safe_vol_id + 1
 
-    safe_vol_id = 9876
+    # update the value of the first volume, freeing the ID
+    safe_vol_id = 101
     v1.id = safe_vol_id
-    del v2
+    # delete the second volume, freeing its ID as well
+    v2.delete()
 
+    # create a new volume and ensure that it is automatically assigned the
+    # lowest available ID
     v3 = dagmc.Volume.create(model)
     assert v3.id == safe_vol_id + 1
 
