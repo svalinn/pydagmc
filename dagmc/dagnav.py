@@ -231,11 +231,13 @@ class DAGSet:
     @id.setter
     def id(self, i: int):
         """Set the DAGMC set's ID."""
-        if i in self.model.used_ids[type(self)]:
+        if i is None:
+            i = max(self.model.used_ids[type(self)], default=0) + 1
+        elif i in self.model.used_ids[type(self)]:
             raise ValueError(f'{self.category} ID {i} is already in use in this model.')
-        else:
-            self.model.used_ids[type(self)].discard(self.id)
-            self.model.used_ids[type(self)].add(i)
+
+        self.model.used_ids[type(self)].discard(self.id)
+        self.model.used_ids[type(self)].add(i)
 
         self._tag_set_data(self.model.id_tag, i)
 
@@ -367,7 +369,12 @@ class DAGSet:
         return tri_map, coords
 
     def delete(self):
-        """Delete this group from the DAGMC file."""
+        """Delete this set from the MOAB database, but doesn't
+        delete this DAGSet object.  The object remains but no
+        longer refers to anything in the model.  In many cases, it may
+        make sense to delete this DAGSet object immediately following
+        this operation."""
+        self.model.used_ids[type(self)].discard(self.id)
         self.model.mb.delete_entity(self.handle)
         self.handle = None
         self.model = None
@@ -381,8 +388,7 @@ class DAGSet:
         ent_set.category = cls._category
         # Now that the entity set has proper tags, create derived class and return
         out = cls(model, ent_set.handle)
-        if global_id is not None:
-            out.id = global_id
+        out.id = global_id
         return out
 
 
@@ -677,9 +683,6 @@ class Group(DAGSet):
 
         # Now that entity set has proper tags, create Group, assign name, and return
         group = cls(model, ent_set.handle)
-
-        if group_id is None:
-            group_id = max((grp.id for grp in model.groups), default=0) + 1
 
         group.id = group_id
 

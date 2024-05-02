@@ -185,6 +185,16 @@ def test_id_safety(request):
     v1.id = safe_vol_id
     assert v1.id == safe_vol_id
 
+    v2 = Volume.create(model)
+    assert v2.id == safe_vol_id + 1
+
+    safe_vol_id = 101
+    v1.id = safe_vol_id
+    del v2
+
+    v3 = Volume.create(model)
+    assert v3.id == safe_vol_id + 1
+
     s1 = model.surfaces_by_id[1]
 
     used_surf_id = 2
@@ -194,6 +204,13 @@ def test_id_safety(request):
     safe_surf_id = 9876
     s1.id = safe_surf_id
     assert s1.id == safe_surf_id
+
+    s2 = model.surfaces_by_id[2]
+    s2.id = None
+    assert s2.id == safe_surf_id + 1
+
+    s2.id = 2
+    assert s2.id == 2
 
     g1 = model.groups_by_name['mat:fuel']
 
