@@ -181,18 +181,18 @@ def test_id_safety(request):
     with pytest.raises(ValueError, match="already"):
         v1.id = used_vol_id
 
-    safe_vol_id = 9876
+    safe_vol_id = 101
     v1.id = safe_vol_id
     assert v1.id == safe_vol_id
 
-    v2 = Volume.create(model)
+    v2 = dagmc.Volume.create(model)
     assert v2.id == safe_vol_id + 1
 
-    safe_vol_id = 101
+    safe_vol_id = 9876
     v1.id = safe_vol_id
     del v2
 
-    v3 = Volume.create(model)
+    v3 = dagmc.Volume.create(model)
     assert v3.id == safe_vol_id + 1
 
     s1 = model.surfaces_by_id[1]
