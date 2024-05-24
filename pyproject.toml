@@ -13,7 +13,6 @@ readme = "README.md"
 license = {text = "MIT"}
 dependencies = [
     "numpy",
-    "pymoab"
 ]
 classifiers = [
     "Intended Audience :: Developers",
