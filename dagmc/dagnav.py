@@ -1,12 +1,46 @@
+"""
+This file includes the DAGModel module which is designed to manage and 
+manipulate hierarchical geometric data structures used in computational 
+modeling and simulation, particularly in the context of Discrete Geometry. 
+It uses the PyMOAB library to handle geometric entities, ensuring efficient
+access, manipulation, and storage of geometric data.
+"""
+
 from __future__ import annotations
 from abc import abstractmethod
 from functools import cached_property
 from itertools import chain
 from typing import Optional, Dict
 from warnings import warn
-
+import logging
 import numpy as np
-from pymoab import core, types, rng, tag
+
+try:
+    from pymoab import core, types, rng, tag
+except ImportError as e:
+    logging.error(
+        "pymoab not found. Please ensure that MOAB is installed with HDF5 and pymoab enabled.\n"
+        "You can follow these steps to install MOAB:\n\n"
+        "1. Clone the MOAB repository and checkout version 5.5.1:\n"
+        "   git clone --depth 1 https://bitbucket.org/fathomteam/moab -b 5.5.1\n"
+        "2. Navigate to the MOAB directory and create a build directory:\n"
+        "   cd moab\n"
+        "   mkdir -p build\n"
+        "   cd build\n"
+        "3. Run cmake with the appropriate options and build/install MOAB:\n"
+        "   cmake ../ -DENABLE_HDF5=ON \\\n"
+        "     -DHDF5_ROOT=path/to/hdf5 \\\n"
+        "     -DBUILD_SHARED_LIBS=ON \\\n"
+        "     -DENABLE_PYMOAB=ON \\\n"
+        "     -DENABLE_BLASLAPACK=OFF \\\n"
+        "     -DENABLE_FORTRAN=OFF \\\n"
+        "     -DCMAKE_INSTALL_PREFIX=path/to/python/root/env/where/pydagmc/installed\n"
+        "   make\n"
+        "   make install\n\n"
+        "For more information, you can visit the MOAB repository: https://bitbucket.org/fathomteam/moab\n"
+        "and the HDF5 repository: https://github.com/HDFGroup/hdf5\n\n"
+    )
+    raise e
 
 
 class DAGModel:
