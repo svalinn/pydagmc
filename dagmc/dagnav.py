@@ -10,35 +10,20 @@ from functools import cached_property
 from itertools import chain
 from typing import Optional, Dict
 from warnings import warn
-import logging
 import numpy as np
 
 try:
     from pymoab import core, types, rng, tag
 except ImportError as e:
-    logging.error(
-        "pymoab not found. Please ensure that MOAB is installed with HDF5 and pymoab enabled.\n"
-        "You can follow these steps to install MOAB:\n\n"
-        "1. Clone the MOAB repository and checkout version 5.5.1:\n"
-        "   git clone --depth 1 https://bitbucket.org/fathomteam/moab -b 5.5.1\n"
-        "2. Navigate to the MOAB directory and create a build directory:\n"
-        "   cd moab\n"
-        "   mkdir -p build\n"
-        "   cd build\n"
-        "3. Run cmake with the appropriate options and build/install MOAB:\n"
-        "   cmake ../ -DENABLE_HDF5=ON \\\n"
-        "     -DHDF5_ROOT=path/to/hdf5 \\\n"
-        "     -DBUILD_SHARED_LIBS=ON \\\n"
-        "     -DENABLE_PYMOAB=ON \\\n"
-        "     -DENABLE_BLASLAPACK=OFF \\\n"
-        "     -DENABLE_FORTRAN=OFF \\\n"
-        "     -DCMAKE_INSTALL_PREFIX=path/to/python/root/env/where/pydagmc/installed\n"
-        "   make\n"
-        "   make install\n\n"
-        "For more information, you can visit the MOAB repository: https://bitbucket.org/fathomteam/moab\n"
-        "and the HDF5 repository: https://github.com/HDFGroup/hdf5\n\n"
-    )
-    raise e
+    msg = '''
+    
+    \033[1m\033[91mPyMOAB package was not found.\033[0m
+
+    \033[1mPlease install this package using the instructions found here:\033[0m
+
+    \033[94mhttps://ftp.mcs.anl.gov/pub/fathom/moab-docs/building.html\033[0m
+    '''
+    raise ModuleNotFoundError(msg) from e
 
 
 class DAGModel:
