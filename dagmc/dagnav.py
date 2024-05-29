@@ -1,9 +1,7 @@
 """
 This file includes the DAGModel module which is designed to manage and 
 manipulate hierarchical geometric data structures used in computational 
-modeling and simulation, particularly in the context of Discrete Geometry. 
-It uses the PyMOAB library to handle geometric entities, ensuring efficient
-access, manipulation, and storage of geometric data.
+modeling and simulation built upon the PyMOAB package.
 """
 
 from __future__ import annotations
