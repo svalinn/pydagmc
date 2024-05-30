@@ -16,14 +16,7 @@ authors = [
 ]
 description = "A convenience interface for examining DAGMC models using PyMOAB"
 readme = "README.md"
-<<<<<<< install-without-pymoab
-license = {text = "MIT"}
-dependencies = [
-    "numpy",
-]
-=======
 license = { text = "MIT" }
->>>>>>> main
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
