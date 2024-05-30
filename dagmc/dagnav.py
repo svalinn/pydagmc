@@ -1,12 +1,29 @@
+"""
+This file includes the DAGModel module which is designed to manage and 
+manipulate hierarchical geometric data structures used in computational 
+modeling and simulation built upon the PyMOAB package.
+"""
+
 from __future__ import annotations
 from abc import abstractmethod
 from functools import cached_property
 from itertools import chain
 from typing import Optional, Dict
 from warnings import warn
-
 import numpy as np
-from pymoab import core, types, rng, tag
+
+try:
+    from pymoab import core, types, rng, tag
+except ImportError as e:
+    msg = '''
+    
+    \033[1m\033[91mPyMOAB package was not found.\033[0m
+
+    \033[1mPlease install this package using the instructions found here:\033[0m
+
+    \033[94mhttps://ftp.mcs.anl.gov/pub/fathom/moab-docs/building.html\033[0m
+    '''
+    raise ModuleNotFoundError(msg) from e
 
 
 class DAGModel:
