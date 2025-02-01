@@ -1,6 +1,6 @@
 """
-This file includes the DAGModel module which is designed to manage and 
-manipulate hierarchical geometric data structures used in computational 
+This file includes the DAGModel module which is designed to manage and
+manipulate hierarchical geometric data structures used in computational
 modeling and simulation built upon the PyMOAB package.
 """
 
@@ -16,7 +16,7 @@ try:
     from pymoab import core, types, rng, tag
 except ImportError as e:
     msg = '''
-    
+
     \033[1m\033[91mPyMOAB package was not found.\033[0m
 
     \033[1mPlease install this package using the instructions found here:\033[0m
@@ -85,7 +85,7 @@ class DAGModel:
         return self.groups_by_name.keys()
 
     def __repr__(self):
-        return f'{type(self).__name__} {self.id}, {self.num_triangles} triangles'
+        return f'{type(self).__name__}: {len(self.volumes)} Volumes, {len(self.surfaces)} Surfaces'
 
     @cached_property
     def id_tag(self):
@@ -95,8 +95,10 @@ class DAGModel:
 
     @cached_property
     def category_tag(self):
-        """Returns the category tag used to intidate the use of meshset. Values include "Group", "Volume", "Surface".
-        "Curve" and "Vertex" are also present in the model options but those classes are not supported in this package.
+        """Returns the category tag used to intidate the use of meshset. Values
+        include "Group", "Volume", "Surface". "Curve" and "Vertex" are also
+        present in the model options but those classes are not supported in this
+        package.
         """
         return self.mb.tag_get_handle(
             types.CATEGORY_TAG_NAME,

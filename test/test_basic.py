@@ -36,6 +36,11 @@ def fuel_pin_model(request):
     return str(fuel_pin_path)
 
 
+def test_model_repr(fuel_pin_model):
+    model = dagmc.DAGModel(fuel_pin_model)
+    model_str = repr(model)
+    assert model_str, 'DAGModel: 4 Volumes, 21 Surfaces'
+
 def test_basic_functionality(request, capfd):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
     groups = dagmc.DAGModel(test_file).groups_by_name
