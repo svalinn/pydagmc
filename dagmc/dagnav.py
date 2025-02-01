@@ -579,7 +579,7 @@ class Group(DAGSet):
     def name(self) -> Optional[str]:
         """Returns the name of this group."""
         try:
-            return self.model.mb.tag_get_data(self.model.name_tag, self.handle, flat=True)[0]
+            return str(self.model.mb.tag_get_data(self.model.name_tag, self.handle, flat=True)[0])
         except RuntimeError:
             return None
 
