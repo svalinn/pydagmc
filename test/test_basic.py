@@ -39,7 +39,7 @@ def fuel_pin_model(request):
 def test_model_repr(fuel_pin_model):
     model = dagmc.DAGModel(fuel_pin_model)
     model_str = repr(model)
-    assert model_str, 'DAGModel: 4 Volumes, 21 Surfaces'
+    assert model_str == 'DAGModel: 4 Volumes, 21 Surfaces, 5 Groups'
 
 def test_basic_functionality(request, capfd):
     test_file = str(request.path.parent / 'fuel_pin.h5m')

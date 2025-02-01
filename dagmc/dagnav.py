@@ -85,7 +85,7 @@ class DAGModel:
         return self.groups_by_name.keys()
 
     def __repr__(self):
-        return f'{type(self).__name__}: {len(self.volumes)} Volumes, {len(self.surfaces)} Surfaces'
+        return f'{type(self).__name__}: {len(self.volumes)} Volumes, {len(self.surfaces)} Surfaces, {len(self.groups)} Groups'
 
     @cached_property
     def id_tag(self):
