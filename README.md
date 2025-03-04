@@ -17,9 +17,9 @@ PyDAGMC classes provide the ability to perform basic queries as properties of th
 Code:
 
 ```python
-import dagmc
+import pydagmc
 
-model = dagmc.DAGModel('dagmc.h5m')
+model = pydagmc.DAGModel('dagmc.h5m')
 
 group_dict = model.groups_by_name
 print(group_dict)
@@ -30,7 +30,7 @@ v1 = fuel_group.volumes_by_id[1]
 
 print(v1)
 
-new_group = dagmc.Group.create(model, name="my_new_group", group_id=10)
+new_group = pydagmc.Group.create(model, name="my_new_group", group_id=10)
 print(new_group)
 
 ```
