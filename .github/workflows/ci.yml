@@ -17,51 +17,23 @@ jobs:
         with:
           submodules: true
 
-      - name: Apt dependencies
+      - name: Setup Conda
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          activate-environment: pydagmc-ci
+          auto-activate-base: false
+
+      - name: Install MOAB
         shell: bash
         run: |
-          sudo apt -y update
-          sudo apt install -y libgcc-9-dev \
-                              libstdc++-9-dev \
-                              libembree-dev \
-                              python3-dev \
-                              libhdf5-dev \
-                              libeigen3-dev \
-                              cmake
+          conda install -y -c conda-forge moab=5.5.1
 
-      - name: Python dependencies
-        shell: bash
-        run: |
-          pip3 install numpy \
-                      cython==0.29.37 \
-                      scipy \
-                      matplotlib \
-                      h5py \
-                      pytest \
-                      pytest-cov \
-                      codecov
-
-      - name: Build MOAB
-        shell: bash
-        run: |
-          cd ~
-          git clone https://bitbucket.org/fathomteam/moab.git
-          cd moab
-          git checkout 5.5.1
-          mkdir build
-          cd build
-          cmake -DENABLE_HDF5=ON -DENABLE_BLASLAPACK=OFF -DENABLE_PYMOAB=ON -DCMAKE_INSTALL_PREFIX=$HOME/opt -DCMAKE_BUILD_TYPE=Release ..
-          make -j4
-          make install
-          cd pymoab
-          pip3 install .
-
-      - name: Install
+      - name: Install PyDAGMC
         shell: bash
         run: |
           pip install .
 
-      - name: Test
+      - name: Test PyDAGMC
         shell: bash
         run: |
           pytest -v .
