@@ -67,7 +67,7 @@ class DAGModel:
         Returns a dictionary mapping material names to lists of
         Volume objects associated with that material.
 
-        Material tags are derived from group names like "mat:material_name".
+        Material names are derived from group names like "mat:material_name".
         The dictionary key will be "material_name". Volumes without a
         material group are excluded.
 
