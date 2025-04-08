@@ -1,5 +1,7 @@
 # PyDAGMC
 
+[![CI](https://github.com/svalinn/pydagmc/actions/workflows/ci.yml/badge.svg)](https://github.com/svalinn/pydagmc/actions/workflows/ci.yml)
+
 PyDAGMC is a Python interface for interacting with DAGMC .h5m files through the embedded topological relationships and metadata contained within. These interactions occur through a set of Python classes corresponding to DAGMC’s metadata Group (a grouping of volumes or surfaces), Volume, and Surface groupings in the mesh database. This interface is intended to provide a simple interface for obtaining information about DAGMC models, replacing significant boilerplate code required to perform the same queries with PyMOAB, the Python interface for MOAB itself.
 
 PyDAGMC classes provide the ability to perform basic queries as properties of the class instances. These queries include:
@@ -17,9 +19,9 @@ PyDAGMC classes provide the ability to perform basic queries as properties of th
 Code:
 
 ```python
-import dagmc
+import pydagmc
 
-model = dagmc.DAGModel('dagmc.h5m')
+model = pydagmc.DAGModel('dagmc.h5m')
 
 group_dict = model.groups_by_name
 print(group_dict)
@@ -30,7 +32,7 @@ v1 = fuel_group.volumes_by_id[1]
 
 print(v1)
 
-new_group = dagmc.Group.create(model, name="my_new_group", group_id=10)
+new_group = pydagmc.Group.create(model, name="my_new_group", group_id=10)
 print(new_group)
 
 ```

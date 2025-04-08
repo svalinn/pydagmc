@@ -42,3 +42,6 @@ test = ["pytest"]
 
 # Setuptools SCM Configuration
 [tool.setuptools_scm]
+
+[tool.setuptools]
+package-dir = {"" = "src"}

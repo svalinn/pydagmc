@@ -8,13 +8,13 @@ from test import config
 
 from pymoab import core
 
-import dagmc
+import pydagmc
 
 # same as the DAGMC model used in the OpenMC DAGMC "legacy" test
 FUEL_PIN_URL = 'https://tinyurl.com/y3ugwz6w' # 1.2 MB
 
 
-def download(url, filename="dagmc.h5m"):
+def download(url, filename="pydagmc.h5m"):
     """
     Helper function for retrieving dagmc models
     """
@@ -36,9 +36,14 @@ def fuel_pin_model(request):
     return str(fuel_pin_path)
 
 
+def test_model_repr(fuel_pin_model):
+    model = pydagmc.DAGModel(fuel_pin_model)
+    model_str = repr(model)
+    assert model_str == 'DAGModel: 4 Volumes, 21 Surfaces, 5 Groups'
+
 def test_basic_functionality(request, capfd):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
-    groups = dagmc.DAGModel(test_file).groups_by_name
+    groups = pydagmc.DAGModel(test_file).groups_by_name
 
     print(groups)
 
@@ -76,13 +81,13 @@ def test_basic_functionality(request, capfd):
 
 def test_group_merge(request):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
-    model = dagmc.DAGModel(test_file)
+    model = pydagmc.DAGModel(test_file)
     groups = model.groups_by_name
 
     orig_group = groups['mat:fuel']
     orig_group_size = len(orig_group.volumes)
     # try to create a new group with the same name as another group
-    new_group = dagmc.Group.create(model, 'mat:fuel')
+    new_group = pydagmc.Group.create(model, 'mat:fuel')
     assert orig_group == new_group
 
     # check that we can update a set ID
@@ -94,7 +99,7 @@ def test_group_merge(request):
     assert orig_group == new_group
 
     # re-add a new group to the instance with the same name
-    new_group = dagmc.Group.create(model, 'mat:fuel')
+    new_group = pydagmc.Group.create(model, 'mat:fuel')
 
     # add one of other volumes to the new set
     for vol in model.volumes:
@@ -116,11 +121,11 @@ def test_group_merge(request):
 
 def test_group_create(request):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
-    model = dagmc.DAGModel(test_file)
+    model = pydagmc.DAGModel(test_file)
     orig_num_groups = len(model.groups)
 
     # Create two new groups
-    new_group1 = dagmc.Group.create(model, 'mat:slime')
+    new_group1 = pydagmc.Group.create(model, 'mat:slime')
     new_group2 = model.create_group('mat:plastic')
 
     assert 'mat:slime' in model.groups_by_name
@@ -132,7 +137,7 @@ def test_group_create(request):
 
 def test_volume(request):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
-    model = dagmc.DAGModel(test_file)
+    model = pydagmc.DAGModel(test_file)
 
     v1 = model.volumes_by_id[1]
     assert v1.material == 'fuel'
@@ -144,19 +149,19 @@ def test_volume(request):
     assert v1 in model.groups_by_name['mat:olive oil']
     assert v1 not in model.groups_by_name['mat:fuel']
 
-    new_vol = dagmc.Volume.create(model, 100)
-    assert isinstance(new_vol, dagmc.Volume)
+    new_vol = pydagmc.Volume.create(model, 100)
+    assert isinstance(new_vol, pydagmc.Volume)
     assert new_vol.id == 100
     assert model.volumes_by_id[100] == new_vol
 
     new_vol2 = model.create_volume(200)
-    assert isinstance(new_vol2, dagmc.Volume)
+    assert isinstance(new_vol2, pydagmc.Volume)
     assert new_vol2.id == 200
     assert model.volumes_by_id[200] == new_vol2
 
 def test_surface(request):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
-    model = dagmc.DAGModel(test_file)
+    model = pydagmc.DAGModel(test_file)
 
     s1 = model.surfaces_by_id[1]
     assert s1.volumes == [model.volumes_by_id[1], model.volumes_by_id[2]]
@@ -173,7 +178,7 @@ def test_surface(request):
 
 def test_id_safety(request):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
-    model = dagmc.DAGModel(test_file)
+    model = pydagmc.DAGModel(test_file)
 
     v1 = model.volumes_by_id[1]
 
@@ -188,7 +193,7 @@ def test_id_safety(request):
     assert v1.id == safe_vol_id
 
     # create a second volume and ensure it gets the next available ID
-    v2 = dagmc.Volume.create(model)
+    v2 = pydagmc.Volume.create(model)
     assert v2.id == safe_vol_id + 1
 
     # update the value of the first volume, freeing the ID
@@ -199,7 +204,7 @@ def test_id_safety(request):
 
     # create a new volume and ensure that it is automatically assigned the
     # lowest available ID
-    v3 = dagmc.Volume.create(model)
+    v3 = pydagmc.Volume.create(model)
     assert v3.id == safe_vol_id + 1
 
     s1 = model.surfaces_by_id[1]
@@ -230,26 +235,26 @@ def test_id_safety(request):
     assert g1.id == safe_grp_id
 
 
-    new_surf = dagmc.Surface.create(model, 100)
-    assert isinstance(new_surf, dagmc.Surface)
+    new_surf = pydagmc.Surface.create(model, 100)
+    assert isinstance(new_surf, pydagmc.Surface)
     assert new_surf.id == 100
     assert model.surfaces_by_id[100] == new_surf
 
     new_surf2 = model.create_surface(200)
-    assert isinstance(new_surf2, dagmc.Surface)
+    assert isinstance(new_surf2, pydagmc.Surface)
     assert new_surf2.id == 200
     assert model.surfaces_by_id[200] == new_surf2
 
 
 def test_hash(request):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
-    model = dagmc.DAGModel(test_file)
+    model = pydagmc.DAGModel(test_file)
 
     d = {group: group.name for group in model.groups}
 
     # check that an entry for the same volume with a different model can be entered
     # into the dict
-    model1 = dagmc.DAGModel(test_file)
+    model1 = pydagmc.DAGModel(test_file)
 
     d.update({group: group.name for group in model1.groups})
 
@@ -257,7 +262,7 @@ def test_hash(request):
 
 def test_compressed_coords(request, capfd):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
-    groups = dagmc.DAGModel(test_file).groups_by_name
+    groups = pydagmc.DAGModel(test_file).groups_by_name
 
     fuel_group = groups['mat:fuel']
     v1 = fuel_group.volumes_by_id[1]
@@ -276,7 +281,7 @@ def test_compressed_coords(request, capfd):
 
 def test_coords(request, capfd):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
-    model = dagmc.DAGModel(test_file)
+    model = pydagmc.DAGModel(test_file)
     groups = model.groups_by_name
 
     group = groups['mat:fuel']
@@ -291,7 +296,7 @@ def test_coords(request, capfd):
 
 def test_to_vtk(tmpdir_factory, request):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
-    groups = dagmc.DAGModel(test_file).groups_by_name
+    groups = pydagmc.DAGModel(test_file).groups_by_name
 
     fuel_group = groups['mat:fuel']
 
@@ -323,14 +328,14 @@ def test_to_vtk(tmpdir_factory, request):
 def test_empty_category(category, dim):
     # Create a volume that has no category assigned
     mb = core.Core()
-    model = dagmc.DAGModel(mb)
-    ent_set = dagmc.DAGSet(model, mb.create_meshset())
+    model = pydagmc.DAGModel(mb)
+    ent_set = pydagmc.DAGSet(model, mb.create_meshset())
     ent_set.geom_dimension = dim
 
     # Instantiating using the proper class (Surface, Volume, Group) should
     # result in the category tag getting assigned
     with pytest.warns(UserWarning):
-        obj = getattr(dagmc, category)(model, ent_set.handle)
+        obj = getattr(pydagmc, category)(model, ent_set.handle)
     assert obj.category == category
 
 
@@ -338,20 +343,20 @@ def test_empty_category(category, dim):
 def test_empty_geom_dimension(category, dim):
     # Create a volume that has no geom_dimension assigned
     mb = core.Core()
-    model = dagmc.DAGModel(mb)
-    ent_set = dagmc.DAGSet(model, mb.create_meshset())
+    model = pydagmc.DAGModel(mb)
+    ent_set = pydagmc.DAGSet(model, mb.create_meshset())
     ent_set.category = category
 
     # Instantiating using the proper class (Surface, Volume, Group) should
     # result in the geom_dimension tag getting assigned
     with pytest.warns(UserWarning):
-        obj = getattr(dagmc, category)(model, ent_set.handle)
+        obj = getattr(pydagmc, category)(model, ent_set.handle)
     assert obj.geom_dimension == dim
 
 
-@pytest.mark.parametrize("cls", [dagmc.Surface, dagmc.Volume, dagmc.Group])
+@pytest.mark.parametrize("cls", [pydagmc.Surface, pydagmc.Volume, pydagmc.Group])
 def test_missing_tags(cls):
-    model = dagmc.DAGModel(core.Core())
+    model = pydagmc.DAGModel(core.Core())
     handle = model.mb.create_meshset()
     with pytest.raises(ValueError):
         cls(model, handle)
@@ -359,8 +364,8 @@ def test_missing_tags(cls):
 
 def test_eq(request):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
-    model1 = dagmc.DAGModel(test_file)
-    model2 = dagmc.DAGModel(test_file)
+    model1 = pydagmc.DAGModel(test_file)
+    model2 = pydagmc.DAGModel(test_file)
 
     model1_v0 = model1.volumes[1]
     model2_v0 = model2.volumes[1]
@@ -371,7 +376,7 @@ def test_eq(request):
 
 
 def test_delete(fuel_pin_model):
-    model = dagmc.DAGModel(fuel_pin_model)
+    model = pydagmc.DAGModel(fuel_pin_model)
 
     fuel_group = model.groups_by_name['mat:fuel']
     fuel_group.delete()
@@ -386,17 +391,17 @@ def test_delete(fuel_pin_model):
 
 def test_write(request, tmpdir):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
-    model = dagmc.DAGModel(test_file)
+    model = pydagmc.DAGModel(test_file)
     model.volumes_by_id[1].id = 12345
     model.write_file('fuel_pin_copy.h5m')
 
-    model = dagmc.DAGModel('fuel_pin_copy.h5m')
+    model = pydagmc.DAGModel('fuel_pin_copy.h5m')
     assert 12345 in model.volumes_by_id
 
 
 def test_volume_value(request):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
-    model = dagmc.DAGModel(test_file)
+    model = pydagmc.DAGModel(test_file)
     exp_vols = {1: np.pi * 7**2 * 40,
                 2: np.pi * (9**2 - 7**2) * 40,
                 3: np.pi * (10**2 - 9**2) * 40,}
@@ -407,7 +412,7 @@ def test_volume_value(request):
 
 def test_area(request):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
-    model = dagmc.DAGModel(test_file)
+    model = pydagmc.DAGModel(test_file)
     exp_areas = {1: 2 * np.pi * 7 * 40,
                  2: np.pi * 7**2,
                  3: np.pi * 7**2,
@@ -423,7 +428,7 @@ def test_area(request):
 
 def test_add_groups(request):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
-    model = dagmc.DAGModel(test_file)
+    model = pydagmc.DAGModel(test_file)
     volumes = model.volumes_by_id
     surfaces = model.surfaces_by_id
 
