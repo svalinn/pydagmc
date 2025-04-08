@@ -31,7 +31,7 @@ jobs:
       - name: Install PyDAGMC
         shell: bash
         run: |
-          pip install .
+          pip install .[test]
 
       - name: Test PyDAGMC
         shell: bash
