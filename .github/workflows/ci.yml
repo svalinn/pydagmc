@@ -41,7 +41,30 @@ jobs:
                       pytest-cov \
                       codecov
 
-      - name: Build MOAB
+      - name: Clone MOAB
+        shell: bash
+        run: |
+          cd ~
+          git clone https://bitbucket.org/fathomteam/moab.git
+          cd moab
+          git checkout 5.5.1
+
+      - name: MOAB SHA Environment Variable
+        shell: bash
+        run: |
+          echo "MOAB_SHA=$(cd ~/moab && git rev-parse HEAD)" >> $GITHUB_ENV
+
+      - name: MOAB Cache
+        id: moab-cache
+        uses: actions/cache@v3
+        env:
+          cache-name: cache-moab
+        with:
+          path: ~/moab
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ env.MOAB_SHA }}
+
+      - if: ${{ steps.moab-cache.outputs.cache-hit != 'true' }}
+        name: Build MOAB
         shell: bash
         run: |
           cd ~
@@ -50,13 +73,18 @@ jobs:
           git checkout 5.5.1
           mkdir build
           cd build
-          cmake -DENABLE_HDF5=ON -DENABLE_BLASLAPACK=OFF -DENABLE_PYMOAB=ON -DCMAKE_INSTALL_PREFIX=$HOME/opt -DCMAKE_BUILD_TYPE=Release ..
+          cmake -DENABLE_HDF5=ON -DENABLE_BLASLAPACK=OFF -DENABLE_PYMOAB=ON -DCMAKE_INSTALL_PREFIX=$HOME/moab -DCMAKE_BUILD_TYPE=Release ..
           make -j4
+
+      - name: Install PyMOAB
+        shell: bash
+        run: |
+          cd ~/moab
           make install
           cd pymoab
           pip3 install .
 
-      - name: Install
+      - name: Install PyDAGMC
         shell: bash
         run: |
           pip install .
