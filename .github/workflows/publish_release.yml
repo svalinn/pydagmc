@@ -29,21 +29,5 @@ jobs:
         run: |
           python -m build
 
-      - name: Publish package to PyPI
-        if: success()
-        env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
-        run: |
-          twine upload dist/*
-
-      - name: Create a release
-        id: create_release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release create ${{ github.ref }} \
-            -t $GITHUB_REF_NAME \
-            -n ${{ github.ref }} \
-            -F CHANGELOG \
-            ./dist/*
+      - name: Publish a Python distribution to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
