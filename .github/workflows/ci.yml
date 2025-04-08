@@ -20,8 +20,10 @@ jobs:
       - name: Setup Conda
         uses: conda-incubator/setup-miniconda@v3
         with:
-          activate-environment: pydagmc-ci
+          channels: conda-forge
+          mamba-version: "*"
           auto-activate-base: false
+          activate-environment: pydagmc-ci
 
       - name: Install MOAB
         shell: bash
