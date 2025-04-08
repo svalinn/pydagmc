@@ -26,17 +26,17 @@ jobs:
           activate-environment: pydagmc-ci
 
       - name: Install MOAB
-        shell: bash
+        shell: bash -l {0}
         run: |
           conda install -y -c conda-forge moab=5.5.1
 
       - name: Install PyDAGMC
-        shell: bash
+        shell: bash -l {0}
         run: |
           pip install .[test]
 
       - name: Test PyDAGMC
-        shell: bash
+        shell: bash -l {0}
         run: |
           pytest -v .
 
