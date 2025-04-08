@@ -78,7 +78,7 @@ jobs:
       - name: Install PyMOAB
         shell: bash
         run: |
-          cd ~/moab/build
+          cd ~/moab/build/pymoab
           pip3 install .
 
       - name: Install PyDAGMC
