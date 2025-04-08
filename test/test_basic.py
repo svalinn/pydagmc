@@ -27,17 +27,28 @@ def download(url, filename="pydagmc.h5m"):
     with open(filename, 'wb') as f:
         f.write(u.read())
 
-
-@pytest.fixture(autouse=True, scope='module')
+@pytest.fixture(autouse=True)
 def fuel_pin_model(request):
-    fuel_pin_path = request.path.parent / "fuel_pin.h5m"
-    if not Path(fuel_pin_path).exists():
-        download(FUEL_PIN_URL, fuel_pin_path)
-    return str(fuel_pin_path)
-
+    """Loads the DAGMC fuel pin model from the test file."""
+    test_file = str(request.path.parent / 'fuel_pin.h5m')
+    if not Path(test_file).exists():
+        download(FUEL_PIN_URL, test_file)
+    try:
+        model = pydagmc.DAGModel(test_file)
+        # Pre-fetch known volumes to fail early if assumptions are wrong
+        model._test_vol1 = model.volumes_by_id[1]
+        model._test_vol2 = model.volumes_by_id[2]
+        model._test_vol3 = model.volumes_by_id[3]
+        model._test_vol4 = model.volumes_by_id[6]
+        return model
+    except KeyError as e:
+        pytest.fail(f"Fixture setup failed: Volume ID {e} not found. "
+                    f"Verify assumed IDs match fuel_pin.h5m: {test_file}")
+    except Exception as e: # Catch other potential loading errors
+         pytest.fail(f"Fixture setup failed: Could not load model {test_file}. Error: {e}")
 
 def test_model_repr(fuel_pin_model):
-    model = pydagmc.DAGModel(fuel_pin_model)
+    model = fuel_pin_model
     model_str = repr(model)
     assert model_str == 'DAGModel: 4 Volumes, 21 Surfaces, 5 Groups'
 
@@ -134,24 +145,15 @@ def test_group_create(request):
     assert model.groups_by_name['mat:plastic'] == new_group2
     assert len(model.groups) == orig_num_groups + 2
 
-def test_volume(request):
-    """
-    Tests volume access, material assignment, and material-based retrieval
-    based on the known content of fuel_pin.h5m (2x fuel, 1x 41, 1x Graveyard).
-    """
-    test_file = str(request.path.parent / 'fuel_pin.h5m') # Adjust path
-    model = pydagmc.DAGModel(test_file)
+def test_initial_volume_properties_and_groups(fuel_pin_model):
+    """Tests accessing volumes by ID and their initial material property/group."""
+    model = fuel_pin_model
+    vol1 = model._test_vol1
+    vol2 = model._test_vol2
+    vol3 = model._test_vol3
+    vol4 = model._test_vol4
 
-    try:
-        vol1 = model.volumes_by_id[1]
-        vol2 = model.volumes_by_id[2]
-        vol3 = model.volumes_by_id[3]
-        vol4 = model.volumes_by_id[6]
-    except KeyError as e:
-        pytest.fail(f"Test assumption failed: Volume ID {e} not found. "
-                    f"Verify assumed IDs match fuel_pin.h5m.")
-
-    # Check initial material via volume property
+    # Check initial material via volume property and group membership
     assert vol1.material == 'fuel'
     assert vol1 in model.groups_by_name['mat:fuel']
     assert vol2.material == 'fuel'
@@ -161,24 +163,39 @@ def test_volume(request):
     assert vol4.material == 'Graveyard'
     assert vol4 in model.groups_by_name['mat:Graveyard']
 
-    # Check initial state via volumes_by_mat_tag property
+def test_initial_volumes_by_material_map(fuel_pin_model):
+    """Tests the initial state of the volumes_by_mat_tag property."""
+    model = fuel_pin_model
+    vol1 = model._test_vol1
+    vol2 = model._test_vol2
+    vol3 = model._test_vol3
+    vol4 = model._test_vol4
+
     initial_mats = model.volumes_by_mat_tag
+
     assert 'fuel' in initial_mats
     assert '41' in initial_mats
     assert 'Graveyard' in initial_mats
-    assert len(initial_mats) == 3 # Check total number of distinct materials
+    assert len(initial_mats) == 3
 
     assert vol1 in initial_mats['fuel']
     assert vol2 in initial_mats['fuel']
-    assert len(initial_mats['fuel']) == 2 # Check count for 'fuel'
+    assert len(initial_mats['fuel']) == 2
 
     assert vol3 in initial_mats['41']
-    assert len(initial_mats['41']) == 1 # Check count for '41'
+    assert len(initial_mats['41']) == 1
 
     assert vol4 in initial_mats['Graveyard']
-    assert len(initial_mats['Graveyard']) == 1 # Check count for 'Graveyard'
+    assert len(initial_mats['Graveyard']) == 1
 
-    # Check initial state via get_volumes_by_material method
+def test_initial_get_volumes_by_material_method(fuel_pin_model):
+    """Tests the initial state retrieval using get_volumes_by_material()."""
+    model = fuel_pin_model
+    vol1 = model._test_vol1
+    vol2 = model._test_vol2
+    vol3 = model._test_vol3
+    vol4 = model._test_vol4
+
     fuel_vols_method = model.get_volumes_by_material('fuel')
     assert isinstance(fuel_vols_method, list)
     assert vol1 in fuel_vols_method
@@ -186,18 +203,30 @@ def test_volume(request):
     assert len(fuel_vols_method) == 2
 
     fortyone_vols_method = model.get_volumes_by_material('41')
+    assert isinstance(fortyone_vols_method, list)
     assert vol3 in fortyone_vols_method
     assert len(fortyone_vols_method) == 1
 
     graveyard_vols_method = model.get_volumes_by_material('Graveyard')
+    assert isinstance(graveyard_vols_method, list)
     assert vol4 in graveyard_vols_method
     assert len(graveyard_vols_method) == 1
+
+def test_volume_material_change_and_verification(fuel_pin_model):
+    """Tests changing a volume's material and verifies the updated state."""
+    model = fuel_pin_model
+    vol1 = model._test_vol1
+    vol2 = model._test_vol2
+    vol3 = model._test_vol3
+    vol4 = model._test_vol4
 
     # Material Change (Modify vol1 only)
     vol1.material = 'olive oil'
 
     # Check volume property directly for the changed volume
     assert vol1.material == 'olive oil'
+
+    # Check group updates
     assert 'mat:olive oil' in model.groups_by_name
     assert vol1 in model.groups_by_name['mat:olive oil']
     # Check it's removed from the old group's content
@@ -205,8 +234,7 @@ def test_volume(request):
     assert vol1 not in model.groups_by_name['mat:fuel'].volumes # vol1 removed
     assert vol2 in model.groups_by_name['mat:fuel'].volumes # vol2 should still be there
 
-    # Check State AFTER Material Change
-    # Re-fetch the material map property after the change
+    # Check volumes_by_mat_tag property after the change
     mats_after_change = model.volumes_by_mat_tag
 
     # Check new material 'olive oil'
@@ -241,48 +269,82 @@ def test_volume(request):
     assert vol1 not in fuel_vols_method_after
     assert len(fuel_vols_method_after) == 1
 
-    # Test get_volumes_by_material Error Suggestion
-    # Example: searching for 'grave yard' should suggest 'Graveyard'
+def test_get_volumes_by_material_error_handling(fuel_pin_model):
+    """Tests KeyError exceptions and suggestions for get_volumes_by_material()."""
+    model = fuel_pin_model
+
+    # Test suggestion for typo
     with pytest.raises(KeyError, match=r"Did you mean.*Graveyard"): # Regex match
         model.get_volumes_by_material('grave yard')
 
-    # Example: searching for something completely different
+    # Test no suggestion for unrelated name
     with pytest.raises(KeyError, match="Material tag 'xyz' not found.") as excinfo:
         model.get_volumes_by_material('xyz')
     # Check that suggestions aren't included if none are close enough
     assert "Did you mean" not in str(excinfo.value)
 
+def test_volume_creation(fuel_pin_model):
+    """Tests creating new volumes via Volume.create and model.create_volume."""
+    model = fuel_pin_model
 
-    # Test Volume Creation
-    new_vol = pydagmc.Volume.create(model, 100) # Use an unused ID
+    # Test Volume.create
+    new_vol_id = 100
+    assert new_vol_id not in model.volumes_by_id # Ensure ID is unused
+    new_vol = pydagmc.Volume.create(model, new_vol_id)
     assert isinstance(new_vol, pydagmc.Volume)
-    assert new_vol.id == 100
-    assert model.volumes_by_id[100] == new_vol
+    assert new_vol.id == new_vol_id
+    assert model.volumes_by_id[new_vol_id] == new_vol
     assert new_vol.material is None # Should have no material initially
 
-    new_vol2 = model.create_volume(200) # Use another unused ID
+    # Test model.create_volume
+    new_vol2_id = 200
+    assert new_vol2_id not in model.volumes_by_id # Ensure ID is unused
+    new_vol2 = model.create_volume(new_vol2_id)
     assert isinstance(new_vol2, pydagmc.Volume)
-    assert new_vol2.id == 200
-    assert model.volumes_by_id[200] == new_vol2
+    assert new_vol2.id == new_vol2_id
+    assert model.volumes_by_id[new_vol2_id] == new_vol2
     assert new_vol2.material is None
 
     # Check that volumes without materials don't appear in the map
+    initial_mat_count = len(model.volumes_by_mat_tag) # Get count before checking
     mats_after_creation = model.volumes_by_mat_tag
-    assert len(mats_after_creation) == 4 # Still olive oil, fuel, 41, Graveyard
+    assert len(mats_after_creation) == initial_mat_count # Count shouldn't change
     found_new_vol = any(new_vol in v_list for v_list in mats_after_creation.values())
     assert not found_new_vol
     found_new_vol2 = any(new_vol2 in v_list for v_list in mats_after_creation.values())
     assert not found_new_vol2
 
-    # Assign material to a new volume and check again
-    new_vol.material = 'water'
-    assert new_vol.material == 'water'
-    mats_final = model.volumes_by_mat_tag
-    assert 'water' in mats_final
-    assert new_vol in mats_final['water']
-    assert len(mats_final) == 5 # olive oil, fuel, 41, Graveyard, water
+def test_assign_material_to_new_volume(fuel_pin_model):
+    """Tests assigning material to a newly created volume."""
+    model = fuel_pin_model
+    initial_mat_count = len(model.volumes_by_mat_tag)
 
-    water_vols_method = model.get_volumes_by_material('water')
+    # Create a new volume
+    new_vol_id = 100
+    assert new_vol_id not in model.volumes_by_id
+    new_vol = model.create_volume(new_vol_id)
+    assert new_vol.material is None # Verify initial state
+
+    # Assign material
+    new_material_name = 'water'
+    assert new_material_name not in model.volumes_by_mat_tag # Verify material doesn't exist yet
+    new_vol.material = new_material_name
+
+    # Verify assignment
+    assert new_vol.material == new_material_name
+    assert f'mat:{new_material_name}' in model.groups_by_name
+    assert new_vol in model.groups_by_name[f'mat:{new_material_name}']
+
+    # Verify material maps
+    mats_final = model.volumes_by_mat_tag
+    assert new_material_name in mats_final
+    assert new_vol in mats_final[new_material_name]
+    assert len(mats_final[new_material_name]) == 1
+    assert len(mats_final) == initial_mat_count + 1 # Check total count increased by 1
+
+    # Verify get_volumes_by_material
+    water_vols_method = model.get_volumes_by_material(new_material_name)
+    assert isinstance(water_vols_method, list)
     assert new_vol in water_vols_method
     assert len(water_vols_method) == 1
 
@@ -503,7 +565,7 @@ def test_eq(request):
 
 
 def test_delete(fuel_pin_model):
-    model = pydagmc.DAGModel(fuel_pin_model)
+    model = fuel_pin_model
 
     fuel_group = model.groups_by_name['mat:fuel']
     fuel_group.delete()
