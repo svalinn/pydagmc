@@ -11,6 +11,7 @@ from itertools import chain
 from typing import Optional, Dict
 from warnings import warn
 import numpy as np
+import difflib
 
 try:
     from pymoab import core, types, rng, tag
@@ -59,6 +60,81 @@ class DAGModel:
     @property
     def volumes_by_id(self):
         return {v.id: v for v in self.volumes}
+
+    @property
+    def volumes_by_mat_tag(self) -> Dict[str, list[Volume]]:
+        """
+        Returns a dictionary mapping material tags (names) to lists of
+        Volume objects associated with that material.
+
+        Material tags are derived from group names like "mat:material_name".
+        The dictionary key will be "material_name". Volumes without a
+        material group are excluded.
+
+        Returns
+        -------
+        Dict[str, list[Volume]]
+            A dictionary where keys are material names (str) and values
+            are lists of Volume objects.
+        """
+        material_map: Dict[str, list[Volume]] = {}
+        for volume in self.volumes:
+            material_name = volume.material
+            if material_name is not None:
+                if material_name not in material_map:
+                    material_map[material_name] = []
+                material_map[material_name].append(volume)
+        return material_map
+
+    def get_volumes_by_material(self, material_name: str, n_suggestions: int = 3, cutoff: float = 0.6) -> list[Volume]:
+        """
+        Retrieves a list of Volume objects associated with the given material name.
+
+        If the exact material name is not found, it raises a KeyError
+        and suggests potential close matches found in the model using difflib.
+
+        Parameters
+        ----------
+        material_name : str
+            The name of the material to search for (e.g., "fuel", "water").
+        n_suggestions : int, optional
+            The maximum number of suggestions to provide if the name is not found.
+            Defaults to 3.
+        cutoff : float, optional
+            The similarity cutoff for suggestions (0.0 to 1.0). Lower values
+            yield more, potentially less relevant, suggestions. Defaults to 0.6.
+
+        Returns
+        -------
+        list[Volume]
+            A list of Volume objects tagged with the specified material name.
+
+        Raises
+        ------
+        KeyError
+            If the material_name is not found in the model. The error message
+            will include suggestions for similar material names if any exist.
+        """
+        # Use the existing property to get the current mapping
+        all_materials_map = self.volumes_by_mat_tag
+
+        if material_name in all_materials_map:
+            return all_materials_map[material_name]
+        else:
+            # Material not found, generate suggestions
+            actual_material_names = list(all_materials_map.keys())
+            suggestions = difflib.get_close_matches(
+                material_name,
+                actual_material_names,
+                n=n_suggestions,
+                cutoff=cutoff
+            )
+
+            error_msg = f"Material tag '{material_name}' not found."
+            if suggestions:
+                error_msg += f" Did you mean one of these? {', '.join(suggestions)}"
+
+            raise KeyError(error_msg)
 
     @property
     def groups(self):

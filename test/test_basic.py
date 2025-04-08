@@ -134,30 +134,157 @@ def test_group_create(request):
     assert model.groups_by_name['mat:plastic'] == new_group2
     assert len(model.groups) == orig_num_groups + 2
 
-
 def test_volume(request):
-    test_file = str(request.path.parent / 'fuel_pin.h5m')
+    """
+    Tests volume access, material assignment, and material-based retrieval
+    based on the known content of fuel_pin.h5m (2x fuel, 1x 41, 1x Graveyard).
+    """
+    test_file = str(request.path.parent / 'fuel_pin.h5m') # Adjust path
     model = pydagmc.DAGModel(test_file)
 
-    v1 = model.volumes_by_id[1]
-    assert v1.material == 'fuel'
-    assert v1 in model.groups_by_name['mat:fuel']
+    try:
+        vol1 = model.volumes_by_id[1]
+        vol2 = model.volumes_by_id[2]
+        vol3 = model.volumes_by_id[3]
+        vol4 = model.volumes_by_id[6]
+    except KeyError as e:
+        pytest.fail(f"Test assumption failed: Volume ID {e} not found. "
+                    f"Verify assumed IDs match fuel_pin.h5m.")
 
-    v1.material = 'olive oil'
-    assert v1.material == 'olive oil'
+    # Check initial material via volume property
+    assert vol1.material == 'fuel'
+    assert vol1 in model.groups_by_name['mat:fuel']
+    assert vol2.material == 'fuel'
+    assert vol2 in model.groups_by_name['mat:fuel']
+    assert vol3.material == '41'
+    assert vol3 in model.groups_by_name['mat:41']
+    assert vol4.material == 'Graveyard'
+    assert vol4 in model.groups_by_name['mat:Graveyard']
+
+    # Check initial state via volumes_by_mat_tag property
+    initial_mats = model.volumes_by_mat_tag
+    assert 'fuel' in initial_mats
+    assert '41' in initial_mats
+    assert 'Graveyard' in initial_mats
+    assert len(initial_mats) == 3 # Check total number of distinct materials
+
+    assert vol1 in initial_mats['fuel']
+    assert vol2 in initial_mats['fuel']
+    assert len(initial_mats['fuel']) == 2 # Check count for 'fuel'
+
+    assert vol3 in initial_mats['41']
+    assert len(initial_mats['41']) == 1 # Check count for '41'
+
+    assert vol4 in initial_mats['Graveyard']
+    assert len(initial_mats['Graveyard']) == 1 # Check count for 'Graveyard'
+
+    # Check initial state via get_volumes_by_material method
+    fuel_vols_method = model.get_volumes_by_material('fuel')
+    assert isinstance(fuel_vols_method, list)
+    assert vol1 in fuel_vols_method
+    assert vol2 in fuel_vols_method
+    assert len(fuel_vols_method) == 2
+
+    fortyone_vols_method = model.get_volumes_by_material('41')
+    assert vol3 in fortyone_vols_method
+    assert len(fortyone_vols_method) == 1
+
+    graveyard_vols_method = model.get_volumes_by_material('Graveyard')
+    assert vol4 in graveyard_vols_method
+    assert len(graveyard_vols_method) == 1
+
+    # Material Change (Modify vol1 only)
+    vol1.material = 'olive oil'
+
+    # Check volume property directly for the changed volume
+    assert vol1.material == 'olive oil'
     assert 'mat:olive oil' in model.groups_by_name
-    assert v1 in model.groups_by_name['mat:olive oil']
-    assert v1 not in model.groups_by_name['mat:fuel']
+    assert vol1 in model.groups_by_name['mat:olive oil']
+    # Check it's removed from the old group's content
+    assert 'mat:fuel' in model.groups_by_name # Group still exists for vol2
+    assert vol1 not in model.groups_by_name['mat:fuel'].volumes # vol1 removed
+    assert vol2 in model.groups_by_name['mat:fuel'].volumes # vol2 should still be there
 
-    new_vol = pydagmc.Volume.create(model, 100)
+    # Check State AFTER Material Change
+    # Re-fetch the material map property after the change
+    mats_after_change = model.volumes_by_mat_tag
+
+    # Check new material 'olive oil'
+    assert 'olive oil' in mats_after_change
+    assert vol1 in mats_after_change['olive oil']
+    assert len(mats_after_change['olive oil']) == 1
+
+    # Check material 'fuel' - should now only contain vol2
+    assert 'fuel' in mats_after_change
+    assert vol2 in mats_after_change['fuel']
+    assert vol1 not in mats_after_change['fuel'] # Ensure vol1 is gone
+    assert len(mats_after_change['fuel']) == 1 # Count updated
+
+    # Check other materials are unaffected
+    assert '41' in mats_after_change
+    assert vol3 in mats_after_change['41']
+    assert len(mats_after_change['41']) == 1
+    assert 'Graveyard' in mats_after_change
+    assert vol4 in mats_after_change['Graveyard']
+    assert len(mats_after_change['Graveyard']) == 1
+
+    # Check total distinct materials count
+    assert len(mats_after_change) == 4 # olive oil, fuel, 41, Graveyard
+
+    # Check get_volumes_by_material after the change
+    olive_vols_method = model.get_volumes_by_material('olive oil')
+    assert vol1 in olive_vols_method
+    assert len(olive_vols_method) == 1
+
+    fuel_vols_method_after = model.get_volumes_by_material('fuel') # Should now only return vol2
+    assert vol2 in fuel_vols_method_after
+    assert vol1 not in fuel_vols_method_after
+    assert len(fuel_vols_method_after) == 1
+
+    # Test get_volumes_by_material Error Suggestion
+    # Example: searching for 'grave yard' should suggest 'Graveyard'
+    with pytest.raises(KeyError, match=r"Did you mean.*Graveyard"): # Regex match
+        model.get_volumes_by_material('grave yard')
+
+    # Example: searching for something completely different
+    with pytest.raises(KeyError, match="Material tag 'xyz' not found.") as excinfo:
+        model.get_volumes_by_material('xyz')
+    # Check that suggestions aren't included if none are close enough
+    assert "Did you mean" not in str(excinfo.value)
+
+
+    # Test Volume Creation
+    new_vol = pydagmc.Volume.create(model, 100) # Use an unused ID
     assert isinstance(new_vol, pydagmc.Volume)
     assert new_vol.id == 100
     assert model.volumes_by_id[100] == new_vol
+    assert new_vol.material is None # Should have no material initially
 
-    new_vol2 = model.create_volume(200)
+    new_vol2 = model.create_volume(200) # Use another unused ID
     assert isinstance(new_vol2, pydagmc.Volume)
     assert new_vol2.id == 200
     assert model.volumes_by_id[200] == new_vol2
+    assert new_vol2.material is None
+
+    # Check that volumes without materials don't appear in the map
+    mats_after_creation = model.volumes_by_mat_tag
+    assert len(mats_after_creation) == 4 # Still olive oil, fuel, 41, Graveyard
+    found_new_vol = any(new_vol in v_list for v_list in mats_after_creation.values())
+    assert not found_new_vol
+    found_new_vol2 = any(new_vol2 in v_list for v_list in mats_after_creation.values())
+    assert not found_new_vol2
+
+    # Assign material to a new volume and check again
+    new_vol.material = 'water'
+    assert new_vol.material == 'water'
+    mats_final = model.volumes_by_mat_tag
+    assert 'water' in mats_final
+    assert new_vol in mats_final['water']
+    assert len(mats_final) == 5 # olive oil, fuel, 41, Graveyard, water
+
+    water_vols_method = model.get_volumes_by_material('water')
+    assert new_vol in water_vols_method
+    assert len(water_vols_method) == 1
 
 def test_surface(request):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
