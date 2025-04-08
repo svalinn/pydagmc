@@ -84,7 +84,7 @@ class DAGModel:
             material_map[material_name].append(volume)
         return dict(material_map)
 
-    def get_volumes_by_material(self, material_name: str, n_suggestions: int = 3, cutoff: float = 0.6) -> list[Volume]:
+    def get_volumes_by_material(self, material_name: str) -> list[Volume]:
         """
         Retrieves a list of Volume objects associated with the given material name.
 
@@ -95,12 +95,6 @@ class DAGModel:
         ----------
         material_name : str
             The name of the material to search for (e.g., "fuel", "water").
-        n_suggestions : int, optional
-            The maximum number of suggestions to provide if the name is not found.
-            Defaults to 3.
-        cutoff : float, optional
-            The similarity cutoff for suggestions (0.0 to 1.0). Lower values
-            yield more, potentially less relevant, suggestions. Defaults to 0.6.
 
         Returns
         -------
@@ -124,8 +118,8 @@ class DAGModel:
             suggestions = difflib.get_close_matches(
                 material_name,
                 actual_material_names,
-                n=n_suggestions,
-                cutoff=cutoff
+                n=3,
+                cutoff=0.6
             )
 
             error_msg = f"Material tag '{material_name}' not found."
