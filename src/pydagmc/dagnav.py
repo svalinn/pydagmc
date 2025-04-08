@@ -64,7 +64,7 @@ class DAGModel:
     @property
     def volumes_by_mat_tag(self) -> Dict[str, list[Volume]]:
         """
-        Returns a dictionary mapping material tags (names) to lists of
+        Returns a dictionary mapping material names to lists of
         Volume objects associated with that material.
 
         Material tags are derived from group names like "mat:material_name".
