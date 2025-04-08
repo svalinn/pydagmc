@@ -9,6 +9,7 @@ from abc import abstractmethod
 from functools import cached_property
 from itertools import chain
 from typing import Optional, Dict
+from collections import defaultdict
 from warnings import warn
 import numpy as np
 import difflib
@@ -81,7 +82,7 @@ class DAGModel:
         for volume in self.volumes:
             if volume.material is None:
                 continue
-            material_map[material_name].append(volume)
+            material_map[volume.material].append(volume)
         return dict(material_map)
 
     def get_volumes_by_material(self, material_name: str) -> list[Volume]:
