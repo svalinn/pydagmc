@@ -60,7 +60,9 @@ jobs:
         env:
           cache-name: cache-moab
         with:
-          path: ~/moab
+          path: |
+            ~/moab
+            ~/opt
           key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ env.MOAB_SHA }}
 
       - if: ${{ steps.moab-cache.outputs.cache-hit != 'true' }}
@@ -73,15 +75,13 @@ jobs:
           git checkout 5.5.1
           mkdir build
           cd build
-          cmake -DENABLE_HDF5=ON -DENABLE_BLASLAPACK=OFF -DENABLE_PYMOAB=ON -DCMAKE_INSTALL_PREFIX=$HOME/moab -DCMAKE_BUILD_TYPE=Release ..
+          cmake -DENABLE_HDF5=ON -DENABLE_BLASLAPACK=OFF -DENABLE_PYMOAB=ON -DCMAKE_INSTALL_PREFIX=$HOME/opt -DCMAKE_BUILD_TYPE=Release ..
           make -j4
 
       - name: Install PyMOAB
         shell: bash
         run: |
-          cd ~/moab
-          make install
-          cd pymoab
+          cd ~/moab/build
           pip3 install .
 
       - name: Install PyDAGMC
