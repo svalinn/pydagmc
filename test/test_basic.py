@@ -43,9 +43,12 @@ def test_model_repr(fuel_pin_model):
 
 def test_basic_functionality(request, capfd):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
-    groups = pydagmc.DAGModel(test_file).groups_by_name
-
+    model = pydagmc.DAGModel(test_file)
+    groups = model.groups_by_name
     print(groups)
+    # ensure that the groups attribude is indexable
+    first_group = model.groups[0]
+    assert isinstance(first_group, pydagmc.Group)
 
     fuel_group = groups['mat:fuel']
     print(fuel_group)
