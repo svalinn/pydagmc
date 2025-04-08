@@ -77,14 +77,12 @@ class DAGModel:
             A dictionary where keys are material names (str) and values
             are lists of Volume objects.
         """
-        material_map: Dict[str, list[Volume]] = {}
+        material_map: DefaultDict[str, list[Volume]] = defaultdict(list)
         for volume in self.volumes:
-            material_name = volume.material
-            if material_name is not None:
-                if material_name not in material_map:
-                    material_map[material_name] = []
-                material_map[material_name].append(volume)
-        return material_map
+            if volume.material is None:
+                continue
+            material_map[material_name].append(volume)
+        return dict(material_map)
 
     def get_volumes_by_material(self, material_name: str, n_suggestions: int = 3, cutoff: float = 0.6) -> list[Volume]:
         """
