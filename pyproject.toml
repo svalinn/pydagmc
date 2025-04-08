@@ -39,6 +39,7 @@ dependencies = ["numpy"]
 # Optional Dependencies
 [project.optional-dependencies]
 test = ["pytest"]
+ci = ["pytest-cov"]
 
 # Project URLs
 [project.urls]

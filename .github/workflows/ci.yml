@@ -37,9 +37,7 @@ jobs:
                       scipy \
                       matplotlib \
                       h5py \
-                      pytest \
-                      pytest-cov \
-                      codecov
+                      pytest
 
       - name: Build MOAB
         shell: bash
@@ -59,12 +57,12 @@ jobs:
       - name: Install
         shell: bash
         run: |
-          pip install .
+          pip install .[test,ci]
 
-      - name: Test
+      - name: Test w/ coverage
         shell: bash
         run: |
-          pytest -v .
+          pytest . -v --cov=pydagmc
 
       - name: tmate debug
         if: ${{ failure() }}
