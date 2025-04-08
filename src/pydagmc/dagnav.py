@@ -89,7 +89,7 @@ class DAGModel:
         Retrieves a list of Volume objects associated with the given material name.
 
         If the exact material name is not found, it raises a KeyError
-        and suggests potential close matches found in the model using difflib.
+        and suggests potential close matches found in the model.
 
         Parameters
         ----------
