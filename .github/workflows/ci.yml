@@ -57,7 +57,7 @@ jobs:
       - name: Install
         shell: bash
         run: |
-          pip install .[test,ci]
+          pip install -e .[test,ci]
 
       - name: Test w/ coverage
         shell: bash
