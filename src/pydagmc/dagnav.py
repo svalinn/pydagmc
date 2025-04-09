@@ -62,7 +62,7 @@ class DAGModel:
 
     @property
     def groups(self):
-        return self.groups_by_name.values()
+        return list(self.groups_by_name.values())
 
     @property
     def groups_by_name(self) -> Dict[str, Group]:
