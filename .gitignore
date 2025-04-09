@@ -12,3 +12,4 @@ pydagmc.egg-info/
 
 # Source build
 build
+.coverage
