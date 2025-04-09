@@ -62,7 +62,7 @@ jobs:
       - name: Test w/ coverage
         shell: bash
         run: |
-          pytest . -v --cov=pydagmc --cov-branch --cov-report=xml --cov-report=term-missing
+          pytest . -v --cov=src/pydagmc --cov-branch --cov-report=xml --cov-report=term-missing
 
       - name: Upload coverage
         uses: codecov/codecov-action@v2
