@@ -283,6 +283,86 @@ def test_get_volumes_by_material_error_handling(fuel_pin_model):
     # Check that suggestions aren't included if none are close enough
     assert "Did you mean" not in str(excinfo.value)
 
+def test_initial_volumes_without_material(fuel_pin_model):
+    """
+    Tests that the initial fuel pin model (as loaded) has no volumes
+    without assigned materials.
+    """
+    model = fuel_pin_model
+
+    # Test the property
+    unassigned_prop = model.volumes_without_material
+    assert isinstance(unassigned_prop, list)
+    assert len(unassigned_prop) == 0, "Expected no unassigned volumes initially"
+
+    # Test the method
+    unassigned_method = model.get_volumes_without_material()
+    assert isinstance(unassigned_method, list)
+    assert len(unassigned_method) == 0, "Expected no unassigned volumes initially via method"
+    assert unassigned_prop == unassigned_method # Ensure they return the same
+
+def test_volumes_without_material_after_creation(fuel_pin_model):
+    """
+    Tests that newly created volumes appear in the unassigned list,
+    and are removed when assigned a material.
+    """
+    model = fuel_pin_model
+
+    # Check initial state (should be empty based on previous test)
+    assert len(model.volumes_without_material) == 0
+
+    # Create new volumes
+    new_vol_id1 = 101
+    new_vol_id2 = 102
+    assert new_vol_id1 not in model.volumes_by_id
+    assert new_vol_id2 not in model.volumes_by_id
+
+    new_vol1 = model.create_volume(new_vol_id1)
+    new_vol2 = model.create_volume(new_vol_id2)
+
+    assert new_vol1.material is None
+    assert new_vol2.material is None
+
+    # Verify they are now in the unassigned list (using property)
+    unassigned_after_create = model.volumes_without_material
+    assert isinstance(unassigned_after_create, list)
+    assert len(unassigned_after_create) == 2
+    assert new_vol1 in unassigned_after_create
+    assert new_vol2 in unassigned_after_create
+
+    # Verify using the method
+    unassigned_method_after_create = model.get_volumes_without_material()
+    assert unassigned_after_create == unassigned_method_after_create
+
+    # Assign material to one of the new volumes
+    new_material = 'test_material'
+    new_vol1.material = new_material
+
+    # Verify new_vol1 now has material and is NOT in the unassigned list
+    assert new_vol1.material == new_material
+    unassigned_after_assign = model.volumes_without_material
+    assert isinstance(unassigned_after_assign, list)
+    assert len(unassigned_after_assign) == 1 # Should only contain new_vol2 now
+    assert new_vol1 not in unassigned_after_assign
+    assert new_vol2 in unassigned_after_assign # The other one should still be there
+
+    # Verify using the method again
+    unassigned_method_after_assign = model.get_volumes_without_material()
+    assert unassigned_after_assign == unassigned_method_after_assign
+
+    # Assign material to the second new volume
+    new_vol2.material = "another_material"
+    assert new_vol2.material == "another_material"
+    unassigned_final = model.volumes_without_material
+    assert isinstance(unassigned_final, list)
+    assert len(unassigned_final) == 0 # Should be empty again
+    assert new_vol1 not in unassigned_final
+    assert new_vol2 not in unassigned_final
+
+    # Verify using the method
+    unassigned_method_final = model.get_volumes_without_material()
+    assert unassigned_final == unassigned_method_final
+
 def test_volume_creation(fuel_pin_model):
     """Tests creating new volumes via Volume.create and model.create_volume."""
     model = fuel_pin_model

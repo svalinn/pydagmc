@@ -130,6 +130,21 @@ class DAGModel:
             raise KeyError(error_msg)
 
     @property
+    def volumes_without_material(self) -> list[Volume]:
+        """
+        Returns a list of Volume objects that have not been assigned
+        a material group (i.e., volume.material is None).
+        """
+        return [volume for volume in self.volumes if volume.material is None]
+
+    def get_volumes_without_material(self) -> list[Volume]:
+        """
+        Returns a list of Volume objects that have not been assigned
+        a material group (i.e., volume.material is None).
+        """
+        return self.volumes_without_material
+
+    @property
     def groups(self):
         return self.groups_by_name.values()
 
