@@ -28,6 +28,8 @@ except ImportError as e:
 
 class DAGModel:
 
+    mb: core.Core
+
     def __init__(self, moab_file=None):
         if isinstance(moab_file, core.Core):
             self.mb = moab_file
