@@ -308,6 +308,17 @@ class DAGSet:
             filename += '.vtk'
         self.model.mb.write_file(filename, output_sets=[self.handle])
 
+    def load_file(self, filename):
+        """Load data from a file into this set.
+
+        Parameters
+        ----------
+        filename : str
+            The file to read from.
+
+        """
+        self.model.mb.load_file(filename, self.handle)
+
     @property
     def triangle_handles(self):
         """Returns a pymoab.rng.Range of all triangle handles under this set.
