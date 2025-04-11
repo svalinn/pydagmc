@@ -330,9 +330,8 @@ def test_to_vtk(tmpdir_factory, request):
 @pytest.mark.parametrize("category,dim", [('Surface', 2), ('Volume', 3), ('Group', 4)])
 def test_empty_category(category, dim):
     # Create a volume that has no category assigned
-    mb = core.Core()
-    model = pydagmc.DAGModel(mb)
-    ent_set = pydagmc.DAGSet(model, mb.create_meshset())
+    model = pydagmc.DAGModel()
+    ent_set = pydagmc.DAGSet(model, model.mb.create_meshset())
     ent_set.geom_dimension = dim
 
     # Instantiating using the proper class (Surface, Volume, Group) should
@@ -359,7 +358,7 @@ def test_empty_geom_dimension(category, dim):
 
 @pytest.mark.parametrize("cls", [pydagmc.Surface, pydagmc.Volume, pydagmc.Group])
 def test_missing_tags(cls):
-    model = pydagmc.DAGModel(core.Core())
+    model = pydagmc.DAGModel()
     handle = model.mb.create_meshset()
     with pytest.raises(ValueError):
         cls(model, handle)
