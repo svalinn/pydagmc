@@ -164,14 +164,14 @@ def test_initial_volume_properties_and_groups(fuel_pin_model):
     assert vol4 in model.groups_by_name['mat:Graveyard']
 
 def test_initial_volumes_by_material_map(fuel_pin_model):
-    """Tests the initial state of the volumes_by_mat_tag property."""
+    """Tests the initial state of the volumes_by_material property."""
     model = fuel_pin_model
     vol1 = model._test_vol1
     vol2 = model._test_vol2
     vol3 = model._test_vol3
     vol4 = model._test_vol4
 
-    initial_mats = model.volumes_by_mat_tag
+    initial_mats = model.volumes_by_material
 
     assert 'fuel' in initial_mats
     assert '41' in initial_mats
@@ -234,8 +234,8 @@ def test_volume_material_change_and_verification(fuel_pin_model):
     assert vol1 not in model.groups_by_name['mat:fuel'].volumes # vol1 removed
     assert vol2 in model.groups_by_name['mat:fuel'].volumes # vol2 should still be there
 
-    # Check volumes_by_mat_tag property after the change
-    mats_after_change = model.volumes_by_mat_tag
+    # Check volumes_by_material property after the change
+    mats_after_change = model.volumes_by_material
 
     # Check new material 'olive oil'
     assert 'olive oil' in mats_after_change
@@ -368,8 +368,8 @@ def test_volume_creation(fuel_pin_model):
     assert new_vol2.material is None
 
     # Check that volumes without materials don't appear in the map
-    initial_mat_count = len(model.volumes_by_mat_tag) # Get count before checking
-    mats_after_creation = model.volumes_by_mat_tag
+    initial_mat_count = len(model.volumes_by_material) # Get count before checking
+    mats_after_creation = model.volumes_by_material
     assert len(mats_after_creation) == initial_mat_count # Count shouldn't change
     found_new_vol = any(new_vol in v_list for v_list in mats_after_creation.values())
     assert not found_new_vol
@@ -379,7 +379,7 @@ def test_volume_creation(fuel_pin_model):
 def test_assign_material_to_new_volume(fuel_pin_model):
     """Tests assigning material to a newly created volume."""
     model = fuel_pin_model
-    initial_mat_count = len(model.volumes_by_mat_tag)
+    initial_mat_count = len(model.volumes_by_material)
 
     # Create a new volume
     new_vol_id = 100
@@ -389,7 +389,7 @@ def test_assign_material_to_new_volume(fuel_pin_model):
 
     # Assign material
     new_material_name = 'water'
-    assert new_material_name not in model.volumes_by_mat_tag # Verify material doesn't exist yet
+    assert new_material_name not in model.volumes_by_material # Verify material doesn't exist yet
     new_vol.material = new_material_name
 
     # Verify assignment
@@ -398,7 +398,7 @@ def test_assign_material_to_new_volume(fuel_pin_model):
     assert new_vol in model.groups_by_name[f'mat:{new_material_name}']
 
     # Verify material maps
-    mats_final = model.volumes_by_mat_tag
+    mats_final = model.volumes_by_material
     assert new_material_name in mats_final
     assert new_vol in mats_final[new_material_name]
     assert len(mats_final[new_material_name]) == 1

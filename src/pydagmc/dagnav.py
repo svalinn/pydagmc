@@ -63,7 +63,7 @@ class DAGModel:
         return {v.id: v for v in self.volumes}
 
     @property
-    def volumes_by_mat_tag(self) -> Dict[str, list[Volume]]:
+    def volumes_by_material(self) -> Dict[str, list[Volume]]:
         """
         Returns a dictionary mapping material names to lists of
         Volume objects associated with that material.
@@ -109,7 +109,7 @@ class DAGModel:
             will include suggestions for similar material names if any exist.
         """
         # Use the existing property to get the current mapping
-        all_materials_map = self.volumes_by_mat_tag
+        all_materials_map = self.volumes_by_material
 
         if material_name in all_materials_map:
             return all_materials_map[material_name]
