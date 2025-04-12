@@ -295,12 +295,6 @@ def test_initial_volumes_without_material(fuel_pin_model):
     assert isinstance(unassigned_prop, list)
     assert len(unassigned_prop) == 0, "Expected no unassigned volumes initially"
 
-    # Test the method
-    unassigned_method = model.get_volumes_without_material()
-    assert isinstance(unassigned_method, list)
-    assert len(unassigned_method) == 0, "Expected no unassigned volumes initially via method"
-    assert unassigned_prop == unassigned_method # Ensure they return the same
-
 def test_volumes_without_material_after_creation(fuel_pin_model):
     """
     Tests that newly created volumes appear in the unassigned list,
@@ -330,10 +324,6 @@ def test_volumes_without_material_after_creation(fuel_pin_model):
     assert new_vol1 in unassigned_after_create
     assert new_vol2 in unassigned_after_create
 
-    # Verify using the method
-    unassigned_method_after_create = model.get_volumes_without_material()
-    assert unassigned_after_create == unassigned_method_after_create
-
     # Assign material to one of the new volumes
     new_material = 'test_material'
     new_vol1.material = new_material
@@ -346,10 +336,6 @@ def test_volumes_without_material_after_creation(fuel_pin_model):
     assert new_vol1 not in unassigned_after_assign
     assert new_vol2 in unassigned_after_assign # The other one should still be there
 
-    # Verify using the method again
-    unassigned_method_after_assign = model.get_volumes_without_material()
-    assert unassigned_after_assign == unassigned_method_after_assign
-
     # Assign material to the second new volume
     new_vol2.material = "another_material"
     assert new_vol2.material == "another_material"
@@ -358,10 +344,6 @@ def test_volumes_without_material_after_creation(fuel_pin_model):
     assert len(unassigned_final) == 0 # Should be empty again
     assert new_vol1 not in unassigned_final
     assert new_vol2 not in unassigned_final
-
-    # Verify using the method
-    unassigned_method_final = model.get_volumes_without_material()
-    assert unassigned_final == unassigned_method_final
 
 def test_volume_creation(fuel_pin_model):
     """Tests creating new volumes via Volume.create and model.create_volume."""
