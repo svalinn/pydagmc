@@ -456,3 +456,10 @@ def test_add_groups(request):
     assert [3] == groups['mat:41'].volume_ids
     assert [27, 28, 29] == sorted(groups['boundary:Reflecting'].surface_ids)
     assert [24, 25] == sorted(groups['boundary:Vacuum'].surface_ids)
+
+
+def test_surface_load_file(request):
+    model = pydagmc.DAGModel()
+    surface = model.create_surface()
+    surface.load_file(request.path.parent / 'cube.stl')
+    assert surface.num_triangles == 12

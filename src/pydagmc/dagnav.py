@@ -319,7 +319,7 @@ class DAGSet:
             The file to read from.
 
         """
-        self.model.mb.load_file(filename, self.handle)
+        self.model.mb.load_file(str(filename), self.handle)
 
     @property
     def triangle_handles(self):
