@@ -8,7 +8,8 @@ from __future__ import annotations
 from abc import abstractmethod
 from functools import cached_property
 from itertools import chain
-from typing import Optional, Dict
+import os
+from typing import Optional, Dict, Union
 from warnings import warn
 import numpy as np
 
@@ -24,6 +25,9 @@ except ImportError as e:
     \033[94mhttps://ftp.mcs.anl.gov/pub/fathom/moab-docs/building.html\033[0m
     '''
     raise ModuleNotFoundError(msg) from e
+
+# Type for arguments that accept file paths
+PathLike = Union[str, os.PathLike]
 
 
 class DAGModel:
@@ -153,15 +157,15 @@ class DAGModel:
             create_if_missing=True,
         )
 
-    def write_file(self, filename):
+    def write_file(self, filename: PathLike):
         """Write the model to a file.
 
         Parameters
         ----------
-        filename : str
+        filename : path-like
             The file to write to.
         """
-        self.mb.write_file(filename)
+        self.mb.write_file(str(filename))
 
     def add_groups(self, group_map):
         """Adds groups of DAGSets to the model.
@@ -198,9 +202,30 @@ class DAGModel:
         """Create a new empty volume set"""
         return Volume.create(self, global_id)
 
-    def create_surface(self, global_id: Optional[int] = None) -> Surface:
-        """Create a new empty surface set"""
-        return Surface.create(self, global_id)
+    def create_surface(
+        self,
+        global_id: Optional[int] = None,
+        filename: Optional[PathLike] = None
+    ) -> Surface:
+        """Create a new surface set.
+
+        Parameters
+        ----------
+        global_id : int, optional
+            The global ID of the surface. If None, a new ID will be generated.
+        filename : path-like, optional
+            The file to read from. If None, the surface will be created empty.
+
+        Returns
+        -------
+        Surface
+            The new surface set.
+
+        """
+        surface = Surface.create(self, global_id)
+        if filename is not None:
+            self.mb.load_file(str(filename), surface.handle)
+        return surface
 
 
 class DAGSet:
@@ -309,17 +334,6 @@ class DAGSet:
         if not filename.endswith('.vtk'):
             filename += '.vtk'
         self.model.mb.write_file(filename, output_sets=[self.handle])
-
-    def load_file(self, filename):
-        """Load data from a file into this set.
-
-        Parameters
-        ----------
-        filename : str
-            The file to read from.
-
-        """
-        self.model.mb.load_file(str(filename), self.handle)
 
     @property
     def triangle_handles(self):

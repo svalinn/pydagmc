@@ -460,6 +460,5 @@ def test_add_groups(request):
 
 def test_surface_load_file(request):
     model = pydagmc.DAGModel()
-    surface = model.create_surface()
-    surface.load_file(request.path.parent / 'cube.stl')
+    surface = model.create_surface(filename=request.path.parent / 'cube.stl')
     assert surface.num_triangles == 12
