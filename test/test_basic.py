@@ -462,3 +462,7 @@ def test_surface_load_file(request):
     model = pydagmc.DAGModel()
     surface = model.create_surface(filename=request.path.parent / 'cube.stl')
     assert surface.num_triangles == 12
+
+    # Non-STL file should not be allowed
+    with pytest.raises(ValueError):
+        model.create_surface(filename='badgers.exe')

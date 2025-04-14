@@ -9,6 +9,7 @@ from abc import abstractmethod
 from functools import cached_property
 from itertools import chain
 import os
+from pathlib import Path
 from typing import Optional, Dict, Union
 from warnings import warn
 import numpy as np
@@ -224,6 +225,8 @@ class DAGModel:
         """
         surface = Surface.create(self, global_id)
         if filename is not None:
+            if Path(filename).suffix.lower() != '.stl':
+                raise ValueError("Only STL files are supported for surface creation.")
             self.mb.load_file(str(filename), surface.handle)
         return surface
 
