@@ -8,7 +8,9 @@ from __future__ import annotations
 from abc import abstractmethod
 from functools import cached_property
 from itertools import chain
-from typing import Optional, Dict
+import os
+from pathlib import Path
+from typing import Optional, Dict, Union
 from warnings import warn
 import numpy as np
 
@@ -25,15 +27,21 @@ except ImportError as e:
     '''
     raise ModuleNotFoundError(msg) from e
 
+# Type for arguments that accept file paths
+PathLike = Union[str, os.PathLike]
+
 
 class DAGModel:
 
-    def __init__(self, moab_file):
+    mb: core.Core
+
+    def __init__(self, moab_file=None):
         if isinstance(moab_file, core.Core):
             self.mb = moab_file
         else:
             self.mb = core.Core()
-            self.mb.load_file(moab_file)
+            if moab_file is not None:
+                self.mb.load_file(moab_file)
 
         self.used_ids = {}
         self.used_ids[Surface] = set(self.surfaces_by_id.keys())
@@ -139,15 +147,26 @@ class DAGModel:
             create_if_missing=True,
         )
 
-    def write_file(self, filename):
+    @cached_property
+    def faceting_tol_tag(self):
+        """Faceting tolerance tag."""
+        return self.mb.tag_get_handle(
+            "FACETING_TOL",
+            1,
+            types.MB_TYPE_DOUBLE,
+            types.MB_TAG_SPARSE,
+            create_if_missing=True,
+        )
+
+    def write_file(self, filename: PathLike):
         """Write the model to a file.
 
         Parameters
         ----------
-        filename : str
+        filename : path-like
             The file to write to.
         """
-        self.mb.write_file(filename)
+        self.mb.write_file(str(filename))
 
     def add_groups(self, group_map):
         """Adds groups of DAGSets to the model.
@@ -184,9 +203,32 @@ class DAGModel:
         """Create a new empty volume set"""
         return Volume.create(self, global_id)
 
-    def create_surface(self, global_id: Optional[int] = None) -> Surface:
-        """Create a new empty surface set"""
-        return Surface.create(self, global_id)
+    def create_surface(
+        self,
+        global_id: Optional[int] = None,
+        filename: Optional[PathLike] = None
+    ) -> Surface:
+        """Create a new surface set.
+
+        Parameters
+        ----------
+        global_id : int, optional
+            The global ID of the surface. If None, a new ID will be generated.
+        filename : path-like, optional
+            The file to read from. If None, the surface will be created empty.
+
+        Returns
+        -------
+        Surface
+            The new surface set.
+
+        """
+        surface = Surface.create(self, global_id)
+        if filename is not None:
+            if Path(filename).suffix.lower() != '.stl':
+                raise ValueError("Only STL files are supported for surface creation.")
+            self.mb.load_file(str(filename), surface.handle)
+        return surface
 
 
 class DAGSet:
@@ -470,7 +512,7 @@ class Surface(DAGSet):
         return [Volume(self.model, h) for h in self.model.mb.get_parent_meshsets(self.handle)]
 
     @property
-    def num_triangles(self):
+    def num_triangles(self) -> int:
         """Returns the number of triangles in this surface"""
         return len(self.triangle_handles)
 
@@ -478,7 +520,7 @@ class Surface(DAGSet):
         return [self]
 
     @property
-    def area(self):
+    def area(self) -> float:
         """Returns the area of the surface"""
         conn, coords = self.get_triangle_conn_and_coords()
         sum = 0.0
@@ -530,16 +572,16 @@ class Volume(DAGSet):
         group.add_set(self)
 
     @property
-    def surfaces(self):
+    def surfaces(self) -> list[Surface]:
         """Returns surface objects for all surfaces making up this vollume"""
         return [Surface(self.model, h) for h in self.model.mb.get_child_meshsets(self.handle)]
 
     @property
-    def surfaces_by_id(self):
+    def surfaces_by_id(self) -> dict[int, Surface]:
         return {s.id: s for s in self.surfaces}
 
     @property
-    def num_triangles(self):
+    def num_triangles(self) -> int:
         """Returns the number of triangles in this volume"""
         return sum([s.num_triangles for s in self.surfaces])
 
@@ -547,7 +589,7 @@ class Volume(DAGSet):
         return [s.handle for s in self.surfaces]
 
     @property
-    def volume(self):
+    def volume(self) -> float:
         """Returns the volume of the volume"""
         volume = 0.0
         for surface in self.surfaces:
@@ -614,21 +656,21 @@ class Group(DAGSet):
         return self.model.mb.tag_get_data(self.model.id_tag, self._get_geom_ent_sets(entity_type), flat=True)
 
     @property
-    def volumes(self):
+    def volumes(self) -> list[Volume]:
         """Returns a list of Volume objects for the volumes contained by the group set."""
         return [Volume(self.model, v) for v in self._get_geom_ent_sets('Volume')]
 
     @property
-    def volumes_by_id(self):
+    def volumes_by_id(self) -> dict[int, Volume]:
         return {v.id: v for v in self.volumes}
 
     @property
-    def surfaces(self):
+    def surfaces(self) -> list[Surface]:
         """Returns a list of Surface objects for the surfaces contained by the group set."""
         return [Surface(self.model, s) for s in self._get_geom_ent_sets('Surface')]
 
     @property
-    def surfaces_by_id(self):
+    def surfaces_by_id(self) -> dict[int, Surface]:
         return {s.id: s for s in self.surfaces}
 
     @property
