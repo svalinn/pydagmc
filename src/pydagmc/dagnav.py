@@ -95,7 +95,8 @@ class DAGModel:
 
     def find_volumes_by_material(self, material_name: str) -> list[Volume]:
         """
-        Retrieves a list of Volume objects associated with the given material name.
+        Retrieves a list of Volume objects associated with the provided material
+        name.
 
         If the exact material name is not found, it KeyError is raised
         suggesting potential close matches for the requested material.

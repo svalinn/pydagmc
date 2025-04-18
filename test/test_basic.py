@@ -196,6 +196,7 @@ def test_initial_volumes_by_material_map(fuel_pin_model, fuel_pin_volumes):
     assert vol4 in initial_mats['Graveyard']
     assert len(initial_mats['Graveyard']) == 1
 
+
 def test_initial_find_volumes_by_material_method(fuel_pin_model, fuel_pin_volumes):
     """Tests the initial state retrieval using find_volumes_by_material()."""
     model = fuel_pin_model
@@ -216,6 +217,7 @@ def test_initial_find_volumes_by_material_method(fuel_pin_model, fuel_pin_volume
     assert isinstance(graveyard_vols_method, list)
     assert vol4 in graveyard_vols_method
     assert len(graveyard_vols_method) == 1
+
 
 def test_volume_material_change_and_verification(fuel_pin_model, fuel_pin_volumes):
     """Tests changing a volume's material and verifies the updated state."""
@@ -285,6 +287,7 @@ def test_find_volumes_by_material_error_handling(fuel_pin_model):
         model.find_volumes_by_material('xyz')
     # Check that suggestions aren't included if none are close enough
     assert "Did you mean" not in str(excinfo.value)
+
 
 def test_initial_volumes_without_material(fuel_pin_model):
     """
