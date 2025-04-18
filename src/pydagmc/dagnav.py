@@ -93,7 +93,7 @@ class DAGModel:
             material_map[volume.material].append(volume)
         return dict(material_map)
 
-    def get_volumes_by_material(self, material_name: str) -> list[Volume]:
+    def find_volumes_by_material(self, material_name: str) -> list[Volume]:
         """
         Retrieves a list of Volume objects associated with the given material name.
 

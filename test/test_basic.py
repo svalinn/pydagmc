@@ -196,23 +196,23 @@ def test_initial_volumes_by_material_map(fuel_pin_model, fuel_pin_volumes):
     assert vol4 in initial_mats['Graveyard']
     assert len(initial_mats['Graveyard']) == 1
 
-def test_initial_get_volumes_by_material_method(fuel_pin_model, fuel_pin_volumes):
-    """Tests the initial state retrieval using get_volumes_by_material()."""
+def test_initial_find_volumes_by_material_method(fuel_pin_model, fuel_pin_volumes):
+    """Tests the initial state retrieval using find_volumes_by_material()."""
     model = fuel_pin_model
     vol1, vol2, vol3, vol4 = fuel_pin_volumes
 
-    fuel_vols_method = model.get_volumes_by_material('fuel')
+    fuel_vols_method = model.find_volumes_by_material('fuel')
     assert isinstance(fuel_vols_method, list)
     assert vol1 in fuel_vols_method
     assert vol2 in fuel_vols_method
     assert len(fuel_vols_method) == 2
 
-    fortyone_vols_method = model.get_volumes_by_material('41')
+    fortyone_vols_method = model.find_volumes_by_material('41')
     assert isinstance(fortyone_vols_method, list)
     assert vol3 in fortyone_vols_method
     assert len(fortyone_vols_method) == 1
 
-    graveyard_vols_method = model.get_volumes_by_material('Graveyard')
+    graveyard_vols_method = model.find_volumes_by_material('Graveyard')
     assert isinstance(graveyard_vols_method, list)
     assert vol4 in graveyard_vols_method
     assert len(graveyard_vols_method) == 1
@@ -261,28 +261,28 @@ def test_volume_material_change_and_verification(fuel_pin_model, fuel_pin_volume
     # Check total distinct materials count
     assert len(mats_after_change) == 4 # olive oil, fuel, 41, Graveyard
 
-    # Check get_volumes_by_material after the change
-    olive_vols_method = model.get_volumes_by_material('olive oil')
+    # Check find_volumes_by_material after the change
+    olive_vols_method = model.find_volumes_by_material('olive oil')
     assert vol1 in olive_vols_method
     assert len(olive_vols_method) == 1
 
-    fuel_vols_method_after = model.get_volumes_by_material('fuel') # Should now only return vol2
+    fuel_vols_method_after = model.find_volumes_by_material('fuel') # Should now only return vol2
     assert vol2 in fuel_vols_method_after
     assert vol1 not in fuel_vols_method_after
     assert len(fuel_vols_method_after) == 1
 
 
-def test_get_volumes_by_material_error_handling(fuel_pin_model):
-    """Tests KeyError exceptions and suggestions for get_volumes_by_material()."""
+def test_find_volumes_by_material_error_handling(fuel_pin_model):
+    """Tests KeyError exceptions and suggestions for find_volumes_by_material()."""
     model = fuel_pin_model
 
     # Test suggestion for typo
     with pytest.raises(KeyError, match=r"Did you mean.*Graveyard"): # Regex match
-        model.get_volumes_by_material('grave yard')
+        model.find_volumes_by_material('grave yard')
 
     # Test no suggestion for unrelated name
     with pytest.raises(KeyError, match="Material 'xyz' not found.") as excinfo:
-        model.get_volumes_by_material('xyz')
+        model.find_volumes_by_material('xyz')
     # Check that suggestions aren't included if none are close enough
     assert "Did you mean" not in str(excinfo.value)
 
@@ -410,8 +410,8 @@ def test_assign_material_to_new_volume(fuel_pin_model):
     assert len(mats_final[new_material_name]) == 1
     assert len(mats_final) == initial_mat_count + 1 # Check total count increased by 1
 
-    # Verify get_volumes_by_material
-    water_vols_method = model.get_volumes_by_material(new_material_name)
+    # Verify find_volumes_by_material
+    water_vols_method = model.find_volumes_by_material(new_material_name)
     assert isinstance(water_vols_method, list)
     assert new_vol in water_vols_method
     assert len(water_vols_method) == 1
