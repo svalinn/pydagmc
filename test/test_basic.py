@@ -281,7 +281,7 @@ def test_get_volumes_by_material_error_handling(fuel_pin_model):
         model.get_volumes_by_material('grave yard')
 
     # Test no suggestion for unrelated name
-    with pytest.raises(KeyError, match="Material tag 'xyz' not found.") as excinfo:
+    with pytest.raises(KeyError, match="Material 'xyz' not found.") as excinfo:
         model.get_volumes_by_material('xyz')
     # Check that suggestions aren't included if none are close enough
     assert "Did you mean" not in str(excinfo.value)
