@@ -131,7 +131,7 @@ class DAGModel:
                 cutoff=0.6
             )
 
-            error_msg = f"Material tag '{material_name}' not found."
+            error_msg = f"Material '{material_name}' not found."
             if suggestions:
                 error_msg += f" Did you mean one of these? {', '.join(suggestions)}"
 
