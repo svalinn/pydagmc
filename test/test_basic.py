@@ -27,6 +27,7 @@ def download(url, filename="pydagmc.h5m"):
     with open(filename, 'wb') as f:
         f.write(u.read())
 
+
 @pytest.fixture(autouse=True)
 def fuel_pin_model(request):
     """Loads the DAGMC fuel pin model from the test file."""
@@ -35,22 +36,30 @@ def fuel_pin_model(request):
         download(FUEL_PIN_URL, test_file)
     try:
         model = pydagmc.DAGModel(test_file)
-        # Pre-fetch known volumes to fail early if assumptions are wrong
-        model._test_vol1 = model.volumes_by_id[1]
-        model._test_vol2 = model.volumes_by_id[2]
-        model._test_vol3 = model.volumes_by_id[3]
-        model._test_vol4 = model.volumes_by_id[6]
         return model
-    except KeyError as e:
-        pytest.fail(f"Fixture setup failed: Volume ID {e} not found. "
-                    f"Verify assumed IDs match fuel_pin.h5m: {test_file}")
     except Exception as e: # Catch other potential loading errors
          pytest.fail(f"Fixture setup failed: Could not load model {test_file}. Error: {e}")
+
+
+@pytest.fixture(autouse=True)
+def fuel_pin_volumes(fuel_pin_model):
+    # Pre-fetch known volumes to fail early if assumptions are wrong
+    try:
+        vol1 = fuel_pin_model.volumes_by_id[1]
+        vol2 = fuel_pin_model.volumes_by_id[2]
+        vol3 = fuel_pin_model.volumes_by_id[3]
+        vol4 = fuel_pin_model.volumes_by_id[6]
+    except KeyError as e:
+        pytest.fail(f"Fixture setup failed: Volume ID {e} not found. "
+                    f"Verify assumed IDs match fuel_pin.h5m")
+    return (vol1, vol2, vol3, vol4)
+
 
 def test_model_repr(fuel_pin_model):
     model = fuel_pin_model
     model_str = repr(model)
     assert model_str == 'DAGModel: 4 Volumes, 21 Surfaces, 5 Groups'
+
 
 def test_basic_functionality(request, capfd):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
@@ -148,13 +157,11 @@ def test_group_create(request):
     assert model.groups_by_name['mat:plastic'] == new_group2
     assert len(model.groups) == orig_num_groups + 2
 
-def test_initial_volume_properties_and_groups(fuel_pin_model):
+
+def test_initial_volume_properties_and_groups(fuel_pin_model, fuel_pin_volumes):
     """Tests accessing volumes by ID and their initial material property/group."""
     model = fuel_pin_model
-    vol1 = model._test_vol1
-    vol2 = model._test_vol2
-    vol3 = model._test_vol3
-    vol4 = model._test_vol4
+    vol1, vol2, vol3, vol4 = fuel_pin_volumes
 
     # Check initial material via volume property and group membership
     assert vol1.material == 'fuel'
@@ -166,13 +173,11 @@ def test_initial_volume_properties_and_groups(fuel_pin_model):
     assert vol4.material == 'Graveyard'
     assert vol4 in model.groups_by_name['mat:Graveyard']
 
-def test_initial_volumes_by_material_map(fuel_pin_model):
+
+def test_initial_volumes_by_material_map(fuel_pin_model, fuel_pin_volumes):
     """Tests the initial state of the volumes_by_material property."""
     model = fuel_pin_model
-    vol1 = model._test_vol1
-    vol2 = model._test_vol2
-    vol3 = model._test_vol3
-    vol4 = model._test_vol4
+    vol1, vol2, vol3, vol4 = fuel_pin_volumes
 
     initial_mats = model.volumes_by_material
 
@@ -191,13 +196,10 @@ def test_initial_volumes_by_material_map(fuel_pin_model):
     assert vol4 in initial_mats['Graveyard']
     assert len(initial_mats['Graveyard']) == 1
 
-def test_initial_get_volumes_by_material_method(fuel_pin_model):
+def test_initial_get_volumes_by_material_method(fuel_pin_model, fuel_pin_volumes):
     """Tests the initial state retrieval using get_volumes_by_material()."""
     model = fuel_pin_model
-    vol1 = model._test_vol1
-    vol2 = model._test_vol2
-    vol3 = model._test_vol3
-    vol4 = model._test_vol4
+    vol1, vol2, vol3, vol4 = fuel_pin_volumes
 
     fuel_vols_method = model.get_volumes_by_material('fuel')
     assert isinstance(fuel_vols_method, list)
@@ -215,13 +217,10 @@ def test_initial_get_volumes_by_material_method(fuel_pin_model):
     assert vol4 in graveyard_vols_method
     assert len(graveyard_vols_method) == 1
 
-def test_volume_material_change_and_verification(fuel_pin_model):
+def test_volume_material_change_and_verification(fuel_pin_model, fuel_pin_volumes):
     """Tests changing a volume's material and verifies the updated state."""
     model = fuel_pin_model
-    vol1 = model._test_vol1
-    vol2 = model._test_vol2
-    vol3 = model._test_vol3
-    vol4 = model._test_vol4
+    vol1, vol2, vol3, vol4 = fuel_pin_volumes
 
     # Material Change (Modify vol1 only)
     vol1.material = 'olive oil'
@@ -272,6 +271,7 @@ def test_volume_material_change_and_verification(fuel_pin_model):
     assert vol1 not in fuel_vols_method_after
     assert len(fuel_vols_method_after) == 1
 
+
 def test_get_volumes_by_material_error_handling(fuel_pin_model):
     """Tests KeyError exceptions and suggestions for get_volumes_by_material()."""
     model = fuel_pin_model
@@ -297,6 +297,7 @@ def test_initial_volumes_without_material(fuel_pin_model):
     unassigned_prop = model.volumes_without_material
     assert isinstance(unassigned_prop, list)
     assert len(unassigned_prop) == 0, "Expected no unassigned volumes initially"
+
 
 def test_volumes_without_material_after_creation(fuel_pin_model):
     """
@@ -348,6 +349,7 @@ def test_volumes_without_material_after_creation(fuel_pin_model):
     assert new_vol1 not in unassigned_final
     assert new_vol2 not in unassigned_final
 
+
 def test_volume_creation(fuel_pin_model):
     """Tests creating new volumes via Volume.create and model.create_volume."""
     model = fuel_pin_model
@@ -378,6 +380,7 @@ def test_volume_creation(fuel_pin_model):
     assert not found_new_vol
     found_new_vol2 = any(new_vol2 in v_list for v_list in mats_after_creation.values())
     assert not found_new_vol2
+
 
 def test_assign_material_to_new_volume(fuel_pin_model):
     """Tests assigning material to a newly created volume."""
@@ -413,6 +416,7 @@ def test_assign_material_to_new_volume(fuel_pin_model):
     assert new_vol in water_vols_method
     assert len(water_vols_method) == 1
 
+
 def test_surface(request):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
     model = pydagmc.DAGModel(test_file)
@@ -429,6 +433,7 @@ def test_surface(request):
     s1.reverse_volume = model.volumes_by_id[1]
     assert s1.reverse_volume == model.volumes_by_id[1]
     assert s1.surf_sense == [model.volumes_by_id[3], model.volumes_by_id[1]]
+
 
 def test_id_safety(request):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
@@ -488,7 +493,6 @@ def test_id_safety(request):
     g1.id = safe_grp_id
     assert g1.id == safe_grp_id
 
-
     new_surf = pydagmc.Surface.create(model, 100)
     assert isinstance(new_surf, pydagmc.Surface)
     assert new_surf.id == 100
@@ -513,6 +517,7 @@ def test_hash(request):
     d.update({group: group.name for group in model1.groups})
 
     assert len(d) == len(model.groups) + len(model1.groups)
+
 
 def test_compressed_coords(request, capfd):
     test_file = str(request.path.parent / 'fuel_pin.h5m')
