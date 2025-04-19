@@ -11,8 +11,10 @@ from itertools import chain
 import os
 from pathlib import Path
 from typing import Optional, Dict, Union
+from collections import defaultdict
 from warnings import warn
 import numpy as np
+import difflib
 
 try:
     from pymoab import core, types, rng, tag
@@ -67,6 +69,82 @@ class DAGModel:
     @property
     def volumes_by_id(self):
         return {v.id: v for v in self.volumes}
+
+    @property
+    def volumes_by_material(self) -> Dict[str, list[Volume]]:
+        """
+        Returns a dictionary mapping material names to lists of
+        Volume objects associated with that material.
+
+        Material names are derived from group names like "mat:material_name".
+        The dictionary key will be "material_name". Volumes without a
+        material group are excluded.
+
+        Returns
+        -------
+        Dict[str, list[Volume]]
+            A dictionary where keys are material names (str) and values
+            are lists of Volume objects.
+        """
+        material_map: DefaultDict[str, list[Volume]] = defaultdict(list)
+        for volume in self.volumes:
+            if volume.material is None:
+                continue
+            material_map[volume.material].append(volume)
+        return dict(material_map)
+
+    def find_volumes_by_material(self, material_name: str) -> list[Volume]:
+        """
+        Retrieves a list of Volume objects associated with the provided material
+        name.
+
+        If the exact material name is not found, it KeyError is raised
+        suggesting potential close matches for the requested material.
+
+        Parameters
+        ----------
+        material_name : str
+            The name of the material to search for (e.g., "fuel", "water").
+
+        Returns
+        -------
+        list[Volume]
+            A list of Volume objects tagged with the specified material name.
+
+        Raises
+        ------
+        KeyError
+            If the material_name is not found in the model. The error message
+            will include suggestions for similar material names if any exist.
+        """
+        # Use the existing property to get the current mapping
+        all_materials_map = self.volumes_by_material
+
+        if material_name in all_materials_map:
+            return all_materials_map[material_name]
+        else:
+            # Material not found, generate suggestions
+            actual_material_names = list(all_materials_map.keys())
+            suggestions = difflib.get_close_matches(
+                material_name,
+                actual_material_names,
+                n=3,
+                cutoff=0.6
+            )
+
+            error_msg = f"Material '{material_name}' not found."
+            if suggestions:
+                error_msg += f" Did you mean one of these? {', '.join(suggestions)}"
+
+            raise KeyError(error_msg)
+
+    @property
+    def volumes_without_material(self) -> list[Volume]:
+        """
+        Returns a list of Volume objects that have not been assigned
+        a material group (i.e., volume.material is None).
+        """
+        return [volume for volume in self.volumes if volume.material is None]
 
     @property
     def groups(self):
