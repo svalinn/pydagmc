@@ -1,5 +1,5 @@
 """
-This file includes the DAGModel module which is designed to manage and
+This file includes the pydagmc module which is designed to manage and
 manipulate hierarchical geometric data structures used in computational
 modeling and simulation built upon the PyMOAB package.
 """
@@ -31,7 +31,7 @@ except ImportError as e:
 PathLike = Union[str, os.PathLike]
 
 
-class DAGModel:
+class Model:
 
     mb: core.Core
 
@@ -235,7 +235,7 @@ class DAGSet:
     """
     Generic functionality for a DAGMC EntitySet.
     """
-    def __init__(self, model: DAGModel, handle: np.uint64):
+    def __init__(self, model: Model, handle: np.uint64):
         self.model = model
         self.handle = handle
 
@@ -441,7 +441,7 @@ class DAGSet:
         self.model = None
 
     @classmethod
-    def create(cls, model: DAGModel, global_id: Optional[int] = None) -> DAGSet:
+    def create(cls, model: Model, global_id: Optional[int] = None) -> DAGSet:
         """Create new set"""
         # Add necessary tags for this meshset to be identified appropriately
         ent_set = DAGSet(model, model.mb.create_meshset())
@@ -458,7 +458,7 @@ class Surface(DAGSet):
     _category = 'Surface'
     _geom_dimension = 2
 
-    def __init__(self, model: DAGModel, handle: np.uint64):
+    def __init__(self, model: Model, handle: np.uint64):
         super().__init__(model, handle)
         self._check_category_and_dimension()
 
@@ -535,7 +535,7 @@ class Volume(DAGSet):
     _category: str = 'Volume'
     _geom_dimension: int = 3
 
-    def __init__(self, model: DAGModel, handle: np.uint64):
+    def __init__(self, model: Model, handle: np.uint64):
         super().__init__(model, handle)
         self._check_category_and_dimension()
 
@@ -609,7 +609,7 @@ class Group(DAGSet):
     _category: str = 'Group'
     _geom_dimension: int = 4
 
-    def __init__(self, model: DAGModel, handle: np.uint64):
+    def __init__(self, model: Model, handle: np.uint64):
         super().__init__(model, handle)
         self._check_category_and_dimension()
 
@@ -728,7 +728,7 @@ class Group(DAGSet):
         other_group.handle = self.handle
 
     @classmethod
-    def create(cls, model: DAGModel, name: Optional[str] = None, group_id: Optional[int] = None) -> Group:
+    def create(cls, model: Model, name: Optional[str] = None, group_id: Optional[int] = None) -> Group:
         """Create a new group instance with the given name,
         or return an existing group if one exists."""
 
