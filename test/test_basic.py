@@ -590,7 +590,7 @@ def test_to_vtk(tmpdir_factory, request):
 def test_empty_category(category, dim):
     # Create a volume that has no category assigned
     model = pydagmc.Model()
-    ent_set = pydagmc.DAGSet(model, model.mb.create_meshset())
+    ent_set = pydagmc.GeometrySet(model, model.mb.create_meshset())
     ent_set.geom_dimension = dim
 
     # Instantiating using the proper class (Surface, Volume, Group) should
@@ -605,7 +605,7 @@ def test_empty_geom_dimension(category, dim):
     # Create a volume that has no geom_dimension assigned
     mb = core.Core()
     model = pydagmc.Model(mb)
-    ent_set = pydagmc.DAGSet(model, mb.create_meshset())
+    ent_set = pydagmc.GeometrySet(model, mb.create_meshset())
     ent_set.category = category
 
     # Instantiating using the proper class (Surface, Volume, Group) should

@@ -247,21 +247,21 @@ class Model:
         self.mb.write_file(str(filename))
 
     def add_groups(self, group_map):
-        """Adds groups of DAGSets to the model.
+        """Adds groups of GeometrySets to the model.
 
         Parameters
         ----------
         group_map : dict
             A dictionary whose keys are 2-tuples of (str, int) containing the
             group name and group ID respectively and whose values are iterables
-            of DAGSet objects or DAGSet ID numbers.
+            of GeometrySet objects or GeometrySet ID numbers.
         """
         for (group_name, group_id), dagsets in group_map.items():
             # create a new group or get an existing group
             group = Group.create(self, name=group_name, group_id=group_id)
 
             for dagset in dagsets:
-                if isinstance(dagset, DAGSet):
+                if isinstance(dagset, GeometrySet):
                     group.add_set(dagset)
                 else:
                     if dagset in self.volumes_by_id:
@@ -269,7 +269,7 @@ class Model:
                     elif dagset in self.surfaces_by_id:
                         group.add_set(self.surfaces_by_id[dagset])
                     else:
-                        raise ValueError(f"DAGSet ID={dagset} could not be "
+                        raise ValueError(f"GeometrySet ID={dagset} could not be "
                                          "found in model volumes or surfaces.")
 
     def create_group(self, name: Optional[str] = None, group_id: Optional[int] = None) -> Group:
@@ -309,7 +309,7 @@ class Model:
         return surface
 
 
-class DAGSet:
+class GeometrySet:
     """
     Generic functionality for a DAGMC EntitySet.
     """
@@ -422,7 +422,7 @@ class DAGSet:
         """
         r = rng.Range()
         for s in self._get_triangle_sets():
-            handle = s if not isinstance(s, DAGSet) else s.handle
+            handle = s if not isinstance(s, GeometrySet) else s.handle
             r.merge(self.model.mb.get_entities_by_type(handle, types.MBTRI))
         return r
 
@@ -509,9 +509,9 @@ class DAGSet:
 
     def delete(self):
         """Delete this set from the MOAB database, but doesn't
-        delete this DAGSet object.  The object remains but no
+        delete this GeometrySet object.  The object remains but no
         longer refers to anything in the model.  In many cases, it may
-        make sense to delete this DAGSet object immediately following
+        make sense to delete this GeometrySet object immediately following
         this operation."""
         self.model.used_ids[type(self)].discard(self.id)
         self.model.mb.delete_entity(self.handle)
@@ -519,10 +519,10 @@ class DAGSet:
         self.model = None
 
     @classmethod
-    def create(cls, model: Model, global_id: Optional[int] = None) -> DAGSet:
+    def create(cls, model: Model, global_id: Optional[int] = None) -> GeometrySet:
         """Create new set"""
         # Add necessary tags for this meshset to be identified appropriately
-        ent_set = DAGSet(model, model.mb.create_meshset())
+        ent_set = GeometrySet(model, model.mb.create_meshset())
         ent_set.geom_dimension = cls._geom_dimension
         ent_set.category = cls._category
         # Now that the entity set has proper tags, create derived class and return
@@ -531,7 +531,7 @@ class DAGSet:
         return out
 
 
-class Surface(DAGSet):
+class Surface(GeometrySet):
 
     _category = 'Surface'
     _geom_dimension = 2
@@ -608,7 +608,7 @@ class Surface(DAGSet):
         return 0.5 * sum
 
 
-class Volume(DAGSet):
+class Volume(GeometrySet):
 
     _category: str = 'Volume'
     _geom_dimension: int = 3
@@ -682,7 +682,7 @@ class Volume(DAGSet):
         return volume / 6.0
 
 
-class Group(DAGSet):
+class Group(GeometrySet):
 
     _category: str = 'Group'
     _geom_dimension: int = 4
@@ -691,7 +691,7 @@ class Group(DAGSet):
         super().__init__(model, handle)
         self._check_category_and_dimension()
 
-    def __contains__(self, ent_set: DAGSet):
+    def __contains__(self, ent_set: GeometrySet):
         return any(vol.handle == ent_set.handle for vol in chain(
             self.volumes, self.surfaces))
 
@@ -763,14 +763,14 @@ class Group(DAGSet):
 
     def remove_set(self, ent_set):
         """Remove an entity set from the group."""
-        if isinstance(ent_set, DAGSet):
+        if isinstance(ent_set, GeometrySet):
             self.model.mb.remove_entities(self.handle, [ent_set.handle])
         else:
             self.model.mb.remove_entities(self.handle, [ent_set])
 
     def add_set(self, ent_set):
         """Add an entity set to the group."""
-        if isinstance(ent_set, DAGSet):
+        if isinstance(ent_set, GeometrySet):
             self.model.mb.add_entities(self.handle, [ent_set.handle])
         else:
             self.model.mb.add_entities(self.handle, [ent_set])
@@ -816,7 +816,7 @@ class Group(DAGSet):
                 return model.groups_by_name[name]
 
         # add necessary tags for this meshset to be identified as a group
-        ent_set = DAGSet(model, model.mb.create_meshset())
+        ent_set = GeometrySet(model, model.mb.create_meshset())
         ent_set.category = cls._category
         ent_set.geom_dimension = cls._geom_dimension
 
