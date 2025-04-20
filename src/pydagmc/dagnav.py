@@ -228,8 +228,6 @@ class DAGSet:
             raise ValueError(f"{identifier} has no category or geom_dimension tags assigned.")
 
     def __eq__(self, other):
-        if type(other) != type(self):
-            return False
         return type(other) == type(self) and \
                self.model == other.model and \
                self.handle == other.handle
