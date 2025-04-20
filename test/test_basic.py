@@ -645,6 +645,12 @@ def test_eq(request):
 
     assert model1_v0.handle == model2_v0.handle
 
+    # ensure we can check other types against sets
+    # without error
+    assert None != model1_v0
+    assert 1 != model1_v0
+    assert 10.0 != model1_v0
+
     assert model1_v0 != model2_v0
 
 
