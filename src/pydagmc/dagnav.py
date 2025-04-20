@@ -259,7 +259,6 @@ class Model:
         for (group_name, group_id), dagsets in group_map.items():
             # create a new group or get an existing group
             group = Group.create(self, name=group_name, group_id=group_id)
-
             for dagset in dagsets:
                 if isinstance(dagset, GeometrySet):
                     group.add_set(dagset)
@@ -348,7 +347,9 @@ class GeometrySet:
             raise ValueError(f"{identifier} has no category or geom_dimension tags assigned.")
 
     def __eq__(self, other):
-        return self.model == other.model and self.handle == other.handle
+        return type(other) == type(self) and \
+               self.model == other.model and \
+               self.handle == other.handle
 
     def __hash__(self):
         return hash((self.handle, id(self.model)))
@@ -541,7 +542,7 @@ class Surface(GeometrySet):
         self._check_category_and_dimension()
 
     @property
-    def surf_sense(self) -> list[Optional[Volume]]:
+    def senses(self) -> list[Optional[Volume]]:
         """Surface sense data."""
         try:
             handles = self.model.mb.tag_get_data(
@@ -552,10 +553,10 @@ class Surface(GeometrySet):
         return [Volume(self.model, handle) if handle != 0 else None
                 for handle in handles]
 
-    @surf_sense.setter
-    def surf_sense(self, volumes: list[Optional[Volume]]):
+    @senses.setter
+    def senses(self, volumes: list[Optional[Volume]]):
         if len(volumes) != 2:
-            raise ValueError("surf_sense should be a list of two volumes.")
+            raise ValueError("Senses should be a list of two volumes.")
         sense_data = [vol.handle if vol is not None else np.uint64(0)
                       for vol in volumes]
         self._tag_set_data(self.model.surf_sense_tag, sense_data)
@@ -568,20 +569,20 @@ class Surface(GeometrySet):
     @property
     def forward_volume(self) -> Optional[Volume]:
         """Volume with forward sense with respect to the surface."""
-        return self.surf_sense[0]
+        return self.senses[0]
 
     @forward_volume.setter
     def forward_volume(self, volume: Volume):
-        self.surf_sense = [volume, self.reverse_volume]
+        self.senses = [volume, self.reverse_volume]
 
     @property
     def reverse_volume(self) -> Optional[Volume]:
         """Volume with reverse sense with respect to the surface."""
-        return self.surf_sense[1]
+        return self.senses[1]
 
     @reverse_volume.setter
     def reverse_volume(self, volume: Volume):
-        self.surf_sense = [self.forward_volume, volume]
+        self.senses = [self.forward_volume, volume]
 
     @property
     def volumes(self) -> list[Volume]:
@@ -823,9 +824,9 @@ class Group(GeometrySet):
         # Now that entity set has proper tags, create Group, assign name, and return
         group = cls(model, ent_set.handle)
 
-        group.id = group_id
-
         if name is not None:
             group.name = name
+
+        group.id = group_id
 
         return group

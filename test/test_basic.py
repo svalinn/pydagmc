@@ -245,6 +245,18 @@ def test_group_create_no_initial_name():
     assert group.name == 'assigned_later'
     assert 'assigned_later' in model.groups_by_name
 
+def test_bad_group_id(request, fuel_pin_model):
+    model = fuel_pin_model
+
+    group_map_bad_vol = {("group_a", 1): [1]}
+    with pytest.raises(ValueError, match="Group ID 1 is already in use in this model"):
+        model.add_groups(group_map_bad_vol)
+
+    group_map_bad_id = {("group_b", 100): [99]}
+    with pytest.raises(ValueError, match="GeometrySet ID=99 could not be found"):
+        model.add_groups(group_map_bad_id)
+
+
 def test_initial_volume_properties_and_groups(fuel_pin_model, fuel_pin_volumes):
     """Tests accessing volumes by ID and their initial material property/group."""
     model = fuel_pin_model
@@ -532,11 +544,11 @@ def test_surface(fuel_pin_model):
 
     s1.forward_volume = model.volumes_by_id[3]
     assert s1.forward_volume == model.volumes_by_id[3]
-    assert s1.surf_sense == [model.volumes_by_id[3], model.volumes_by_id[2]]
+    assert s1.senses == [model.volumes_by_id[3], model.volumes_by_id[2]]
 
     s1.reverse_volume = model.volumes_by_id[1]
     assert s1.reverse_volume == model.volumes_by_id[1]
-    assert s1.surf_sense == [model.volumes_by_id[3], model.volumes_by_id[1]]
+    assert s1.senses == [model.volumes_by_id[3], model.volumes_by_id[1]]
 
 
 def test_id_safety(fuel_pin_model):
@@ -731,6 +743,12 @@ def test_eq(request):
     model2_v0 = model2.volumes[1]
 
     assert model1_v0.handle == model2_v0.handle
+
+    # ensure we can check other types against sets
+    # without error
+    assert None != model1_v0
+    assert 1 != model1_v0
+    assert 10.0 != model1_v0
 
     assert model1_v0 != model2_v0
 
