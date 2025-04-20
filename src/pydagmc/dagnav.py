@@ -259,7 +259,6 @@ class Model:
         for (group_name, group_id), dagsets in group_map.items():
             # create a new group or get an existing group
             group = Group.create(self, name=group_name, group_id=group_id)
-
             for dagset in dagsets:
                 if isinstance(dagset, GeometrySet):
                     group.add_set(dagset)
@@ -823,9 +822,9 @@ class Group(GeometrySet):
         # Now that entity set has proper tags, create Group, assign name, and return
         group = cls(model, ent_set.handle)
 
-        group.id = group_id
-
         if name is not None:
             group.name = name
+
+        group.id = group_id
 
         return group
