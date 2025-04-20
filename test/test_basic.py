@@ -348,6 +348,21 @@ def test_volumes_without_material_after_creation(fuel_pin_model):
     assert new_vol1 not in unassigned_final
     assert new_vol2 not in unassigned_final
 
+def test_volume_material_setter_existing_group():
+    """Test changing material when already in a material group."""
+    model = pydagmc.Model()
+    vol = model.create_volume(1)
+    vol.material = 'water'
+    water_group = model.groups_by_name['mat:water']
+    assert vol in water_group.volumes
+
+    vol.material = 'steel'
+    steel_group = model.groups_by_name['mat:steel']
+    assert vol in steel_group.volumes
+
+    water_group_after = model.groups_by_name['mat:water']
+    assert vol not in water_group_after.volumes
+    assert len(water_group_after.volumes) == 0
 
 def test_volume_creation(fuel_pin_model):
     """Tests creating new volumes via Volume.create and model.create_volume."""
@@ -764,3 +779,4 @@ def test_surface_create_invalid_filename():
     model = pydagmc.Model()
     with pytest.raises(ValueError, match="Only STL files are supported"):
         model.create_surface(filename='my_model.step')
+
