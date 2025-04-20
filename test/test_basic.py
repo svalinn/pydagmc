@@ -844,39 +844,81 @@ def test_surface_sense_runtime_error():
         pass
     assert surf.surf_sense == [None, None]
 
-
 def test_surface_set_sense_with_none():
-    """Test setting surface sense when one volume is None."""
-    # Use different IDs to avoid potential clashes with other tests
+    """
+    Test setting surface sense when one or both volumes are None.
+    Also verifies the persistence of parent-child relationships according
+    to the current implementation (setter only adds, never removes).
+    """
     model = pydagmc.Model()
-    surf_id = 2
-    vol_id = 11
+    surf_id = 201
+    vol_id1 = 101
+    vol_id2 = 102
+
     surf = model.create_surface(global_id=surf_id)
-    vol = model.create_volume(global_id=vol_id)
+    vol1 = model.create_volume(global_id=vol_id1)
+    vol2 = model.create_volume(global_id=vol_id2)
 
-    # Test setting forward=None
-    surf.surf_sense = [None, vol]
+    # Check initial state
     assert surf.forward_volume is None
-    assert surf.reverse_volume == vol
-    # Check parents: vol added
-    assert set(model.mb.get_parent_meshsets(surf.handle)) == {vol.handle}
-    assert len(model.mb.get_parent_meshsets(surf.handle)) == 1
-
-    # Test setting reverse=None (vol remains parent, None doesn't add)
-    surf.surf_sense = [vol, None]
-    assert surf.forward_volume == vol
     assert surf.reverse_volume is None
-    # Check parents: vol should still be the only parent
-    assert set(model.mb.get_parent_meshsets(surf.handle)) == {vol.handle}
-    assert len(model.mb.get_parent_meshsets(surf.handle)) == 1
 
-    # Test setting both=None (vol remains parent)
+    # Initially, the surface should have no parents from sense assignment
+    initial_parents = model.mb.get_parent_meshsets(surf.handle)
+    assert len(initial_parents) == 0, "Surface should have no parents initially"
+
+    # Test setting forward=None, reverse=vol1
+    surf.surf_sense = [None, vol1]
+    assert surf.forward_volume is None
+    assert surf.reverse_volume == vol1
+
+    # Check parents: vol1 should be added
+    parents_after_none_vol1 = model.mb.get_parent_meshsets(surf.handle)
+    assert set(parents_after_none_vol1) == {vol1.handle}
+    assert len(parents_after_none_vol1) == 1
+
+    # Test setting forward=vol1, reverse=None
+    surf.surf_sense = [vol1, None]
+    assert surf.forward_volume == vol1
+    assert surf.reverse_volume is None
+
+    # Check parents: vol1 should still be the only parent
+    parents_after_vol1_none = model.mb.get_parent_meshsets(surf.handle)
+    assert set(parents_after_vol1_none) == {vol1.handle}
+    assert len(parents_after_vol1_none) == 1
+
+    # Test setting forward=vol2, reverse=vol1
+    surf.surf_sense = [vol2, vol1]
+    assert surf.forward_volume == vol2
+    assert surf.reverse_volume == vol1
+    parents_after_vol2_vol1 = model.mb.get_parent_meshsets(surf.handle)
+    assert set(parents_after_vol2_vol1) == {vol1.handle, vol2.handle}
+    assert len(parents_after_vol2_vol1) == 2
+
+    # Test setting both=None
+    # Crucially, the current surf_sense setter *does not remove* existing parents.
+    # Therefore, vol1 and vol2 handles remain parents.
     surf.surf_sense = [None, None]
     assert surf.forward_volume is None
     assert surf.reverse_volume is None
-    # Check parents: vol handle should still be present from previous steps
-    assert set(model.mb.get_parent_meshsets(surf.handle)) == {vol.handle}
-    assert len(model.mb.get_parent_meshsets(surf.handle)) == 1
+
+    # Check parents: Parent handles persist because the setter only adds, never removes.
+    parents_after_none_none = model.mb.get_parent_meshsets(surf.handle)
+    expected_parents_at_end = {vol1.handle, vol2.handle}
+    assert set(parents_after_none_none) == expected_parents_at_end
+    assert len(parents_after_none_none) == len(expected_parents_at_end), \
+        f"Expected parents {expected_parents_at_end} to persist"
+
+    # Test setting back to a valid sense
+    # Ensure we can re-establish sense and parent links correctly
+    surf.surf_sense = [vol1, vol2]
+    assert surf.forward_volume == vol1
+    assert surf.reverse_volume == vol2
+    parents_final = model.mb.get_parent_meshsets(surf.handle)
+
+    # Should still be vol1 and vol2 (re-added harmlessly)
+    assert set(parents_final) == {vol1.handle, vol2.handle}
+    assert len(parents_final) == 2
 
 def test_surface_create_invalid_filename():
     """Test create_surface with a non-STL file."""
