@@ -1,11 +1,8 @@
 from pathlib import Path
 import urllib.request
-
 import pytest
 import numpy as np
-
 from test import config
-
 from pymoab import core
 
 import pydagmc
@@ -61,9 +58,8 @@ def test_model_repr(fuel_pin_model):
     assert model_str == 'Model: 4 Volumes, 21 Surfaces, 5 Groups'
 
 
-def test_basic_functionality(request, capfd):
-    test_file = str(request.path.parent / 'fuel_pin.h5m')
-    model = pydagmc.Model(test_file)
+def test_basic_functionality(request, fuel_pin_model, capfd):
+    model = fuel_pin_model
     groups = model.groups_by_name
     print(groups)
     # ensure that the groups attribude is indexable
@@ -102,9 +98,8 @@ def test_basic_functionality(request, capfd):
         assert out == f.read()
 
 
-def test_group_merge(request):
-    test_file = str(request.path.parent / 'fuel_pin.h5m')
-    model = pydagmc.Model(test_file)
+def test_group_merge(fuel_pin_model):
+    model = fuel_pin_model
     groups = model.groups_by_name
 
     orig_group = groups['mat:fuel']
@@ -142,9 +137,8 @@ def test_group_merge(request):
     assert 3 in fuel_group.volumes_by_id
 
 
-def test_group_create(request):
-    test_file = str(request.path.parent / 'fuel_pin.h5m')
-    model = pydagmc.Model(test_file)
+def test_group_create(fuel_pin_model):
+    model = fuel_pin_model
     orig_num_groups = len(model.groups)
 
     # Create two new groups
@@ -420,9 +414,8 @@ def test_assign_material_to_new_volume(fuel_pin_model):
     assert len(water_vols_method) == 1
 
 
-def test_surface(request):
-    test_file = str(request.path.parent / 'fuel_pin.h5m')
-    model = pydagmc.Model(test_file)
+def test_surface(fuel_pin_model):
+    model = fuel_pin_model
 
     s1 = model.surfaces_by_id[1]
     assert s1.volumes == [model.volumes_by_id[1], model.volumes_by_id[2]]
@@ -438,9 +431,8 @@ def test_surface(request):
     assert s1.surf_sense == [model.volumes_by_id[3], model.volumes_by_id[1]]
 
 
-def test_id_safety(request):
-    test_file = str(request.path.parent / 'fuel_pin.h5m')
-    model = pydagmc.Model(test_file)
+def test_id_safety(fuel_pin_model):
+    model = fuel_pin_model
 
     v1 = model.volumes_by_id[1]
 
@@ -522,9 +514,9 @@ def test_hash(request):
     assert len(d) == len(model.groups) + len(model1.groups)
 
 
-def test_compressed_coords(request, capfd):
-    test_file = str(request.path.parent / 'fuel_pin.h5m')
-    groups = pydagmc.Model(test_file).groups_by_name
+def test_compressed_coords(fuel_pin_model, capfd):
+    model = fuel_pin_model
+    groups = model.groups_by_name
 
     fuel_group = groups['mat:fuel']
     v1 = fuel_group.volumes_by_id[1]
@@ -541,9 +533,8 @@ def test_compressed_coords(request, capfd):
     assert (coords[conn_map[tris[0]]].size == 9)
 
 
-def test_coords(request, capfd):
-    test_file = str(request.path.parent / 'fuel_pin.h5m')
-    model = pydagmc.Model(test_file)
+def test_coords(fuel_pin_model, capfd):
+    model = fuel_pin_model
     groups = model.groups_by_name
 
     group = groups['mat:fuel']
@@ -556,9 +547,9 @@ def test_coords(request, capfd):
     conn, coords = surface.get_triangle_conn_and_coords(compress=True)
 
 
-def test_to_vtk(tmpdir_factory, request):
-    test_file = str(request.path.parent / 'fuel_pin.h5m')
-    groups = pydagmc.Model(test_file).groups_by_name
+def test_to_vtk(tmpdir_factory, request, fuel_pin_model):
+    model = fuel_pin_model
+    groups = model.groups_by_name
 
     fuel_group = groups['mat:fuel']
 
@@ -650,9 +641,8 @@ def test_delete(fuel_pin_model):
     assert 'mat:fuel' not in model.groups_by_name
 
 
-def test_write(request, tmpdir):
-    test_file = str(request.path.parent / 'fuel_pin.h5m')
-    model = pydagmc.Model(test_file)
+def test_write(fuel_pin_model, tmpdir):
+    model = fuel_pin_model
     model.volumes_by_id[1].id = 12345
     model.write_file('fuel_pin_copy.h5m')
 
@@ -660,9 +650,8 @@ def test_write(request, tmpdir):
     assert 12345 in model.volumes_by_id
 
 
-def test_volume_value(request):
-    test_file = str(request.path.parent / 'fuel_pin.h5m')
-    model = pydagmc.Model(test_file)
+def test_volume_value(fuel_pin_model):
+    model = fuel_pin_model
     exp_vols = {1: np.pi * 7**2 * 40,
                 2: np.pi * (9**2 - 7**2) * 40,
                 3: np.pi * (10**2 - 9**2) * 40,}
@@ -671,9 +660,8 @@ def test_volume_value(request):
     pytest.approx(model.volumes_by_id[3].volume, exp_vols[3])
 
 
-def test_area(request):
-    test_file = str(request.path.parent / 'fuel_pin.h5m')
-    model = pydagmc.Model(test_file)
+def test_area(fuel_pin_model):
+    model = fuel_pin_model
     exp_areas = {1: 2 * np.pi * 7 * 40,
                  2: np.pi * 7**2,
                  3: np.pi * 7**2,
@@ -687,9 +675,8 @@ def test_area(request):
         pytest.approx(model.surfaces[surf_id].area, exp_area)
 
 
-def test_add_groups(request):
-    test_file = str(request.path.parent / 'fuel_pin.h5m')
-    model = pydagmc.Model(test_file)
+def test_add_groups(fuel_pin_model):
+    model = fuel_pin_model
     volumes = model.volumes_by_id
     surfaces = model.surfaces_by_id
 
