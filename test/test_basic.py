@@ -813,6 +813,19 @@ def test_add_groups(fuel_pin_model):
     assert [27, 28, 29] == sorted(groups['boundary:Reflecting'].surface_ids)
     assert [24, 25] == sorted(groups['boundary:Vacuum'].surface_ids)
 
+def test_add_groups_bad_id():
+    """Test add_groups when an ID in the map doesn't exist."""
+    model = pydagmc.Model()
+    model.create_volume(global_id=1)
+    model.create_surface(global_id=10)
+
+    group_map_bad_vol = {("group_a", 1): [1, 99]}
+    with pytest.raises(ValueError, match="GeometrySet ID=99 could not be found"):
+        model.add_groups(group_map_bad_vol)
+
+    group_map_bad_surf = {("group_b", 2): [999]}
+    with pytest.raises(ValueError, match="GeometrySet ID=999 could not be found"):
+        model.add_groups(group_map_bad_surf)
 
 def test_surface_load_file(request):
     model = pydagmc.Model()
