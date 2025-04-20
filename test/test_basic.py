@@ -1,11 +1,9 @@
 from pathlib import Path
 import urllib.request
-import sys
-import importlib
 import pytest
 import numpy as np
 from test import config
-from pymoab import core, types, tag
+from pymoab import core
 
 import pydagmc
 
