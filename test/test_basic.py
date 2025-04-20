@@ -885,3 +885,45 @@ def test_surface_create_invalid_filename():
     model = pydagmc.Model()
     with pytest.raises(ValueError, match="Only STL files are supported"):
         model.create_surface(filename='my_model.step')
+
+def test_geometryset_category_runtime_error(request):
+    """Test category returns None when tag is missing."""
+    model = pydagmc.Model()
+    raw_handle = model.mb.create_meshset()
+    model.mb.tag_set_data(model.geom_dimension_tag, raw_handle, 2)
+    try:
+        model.mb.tag_delete(model.category_tag, (raw_handle,))
+    except RuntimeError:
+        pass
+    geom_set = pydagmc.GeometrySet(model, raw_handle)
+    assert geom_set.category is None
+
+def test_geometryset_id_setter_duplicate(request):
+    """Test assigning an already used ID."""
+    model = pydagmc.Model()
+    vol1 = model.create_volume(global_id=10)
+    vol2 = model.create_volume(global_id=20)
+    with pytest.raises(ValueError, match="ID 10 is already in use"):
+        vol2.id = 10
+
+def test_geometryset_check_tags_errors(request):
+    """Test _check_category_and_dimension error conditions."""
+    # Dimension assigned, but wrong
+    model = pydagmc.Model()
+    raw_handle_surf_bad_dim = model.mb.create_meshset()
+    model.mb.tag_set_data(model.geom_dimension_tag, raw_handle_surf_bad_dim, 3)
+    model.mb.tag_set_data(model.category_tag, raw_handle_surf_bad_dim, 'Surface')
+    with pytest.raises(ValueError, match="has geom_dimension=3"):
+        _ = pydagmc.Surface(model, raw_handle_surf_bad_dim)
+
+    # Category assigned, but wrong
+    raw_handle_surf_bad_cat = model.mb.create_meshset()
+    model.mb.tag_set_data(model.geom_dimension_tag, raw_handle_surf_bad_cat, 2)
+    model.mb.tag_set_data(model.category_tag, raw_handle_surf_bad_cat, 'Volume')
+    with pytest.raises(ValueError, match="has category=Volume"):
+        _ = pydagmc.Surface(model, raw_handle_surf_bad_cat)
+
+    # Both missing
+    raw_handle_surf_missing_all = model.mb.create_meshset()
+    with pytest.raises(ValueError, match="has no category or geom_dimension"):
+        _ = pydagmc.Surface(model, raw_handle_surf_missing_all)
