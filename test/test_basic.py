@@ -153,6 +153,99 @@ def test_group_create(fuel_pin_model):
     assert model.groups_by_name['mat:plastic'] == new_group2
     assert len(model.groups) == orig_num_groups + 2
 
+def test_group_name_runtime_error():
+    """Test group name returns None when tag is missing."""
+    model = pydagmc.Model()
+    group = model.create_group(group_id=1)
+    try:
+        model.mb.tag_delete(model.name_tag, (group.handle,))
+    except RuntimeError:
+         pass
+    assert group.name is None
+
+def test_group_name_setter_duplicate():
+    """Test assigning an already used group name."""
+    model = pydagmc.Model()
+    group1 = model.create_group(name='group_a', group_id=1)
+    group2 = model.create_group(name='group_b', group_id=2)
+    with pytest.raises(ValueError, match="Group group_a already used"):
+        group2.name = 'group_a'
+
+def test_group_repr_empty():
+    """Test Group.__repr__ with no volumes/surfaces."""
+    model = pydagmc.Model()
+    group_empty = model.create_group(name='empty_group', group_id=1)
+    repr_empty = repr(group_empty)
+    assert 'Name: empty_group' in repr_empty
+    assert 'Volume IDs:' not in repr_empty
+    assert 'Surface IDs:' not in repr_empty
+
+    group_surf_only = model.create_group(name='surf_only', group_id=2)
+    surf = model.create_surface(global_id=10)
+    group_surf_only.add_set(surf)
+    repr_surf_only = repr(group_surf_only)
+    assert 'Name: surf_only' in repr_surf_only
+    assert 'Volume IDs:' not in repr_surf_only
+    assert 'Surface IDs:' in repr_surf_only
+    assert '10' in repr_surf_only
+
+    group_vol_only = model.create_group(name='vol_only', group_id=3)
+    vol = model.create_volume(global_id=20)
+    group_vol_only.add_set(vol)
+    repr_vol_only = repr(group_vol_only)
+    assert 'Name: vol_only' in repr_vol_only
+    assert 'Volume IDs:' in repr_vol_only
+    assert '20' in repr_vol_only
+    assert 'Surface IDs:' not in repr_vol_only
+
+def test_group_add_remove_set_types():
+    """Test Group add_set/remove_set with handles and objects."""
+    model = pydagmc.Model()
+    group = model.create_group(name='add_remove_types', group_id=1)
+    vol_obj = model.create_volume(global_id=10)
+    vol_handle = vol_obj.handle
+
+    group.add_set(vol_handle)
+    assert vol_obj in model.groups_by_name['add_remove_types'].volumes
+    group.remove_set(vol_handle)
+    assert vol_obj not in model.groups_by_name['add_remove_types'].volumes
+
+    group.add_set(vol_obj)
+    assert vol_obj in model.groups_by_name['add_remove_types'].volumes
+    group.remove_set(vol_obj)
+    assert vol_obj not in model.groups_by_name['add_remove_types'].volumes
+
+
+def test_group_merge_name_mismatch():
+    """Test merging groups with different names."""
+    model = pydagmc.Model()
+    group1 = model.create_group(name='group_one', group_id=1)
+    group2 = model.create_group(name='group_two', group_id=2)
+    with pytest.raises(ValueError, match="names group_one and group_two do not match"):
+        group1.merge(group2)
+
+def test_group_create_existing_name():
+    """Test Group.create returns existing group if name matches."""
+    model = pydagmc.Model()
+    group1 = model.create_group(name='my_unique_group', group_id=1)
+    group2 = pydagmc.Group.create(model, name='my_unique_group', group_id=99)
+    assert group1 == group2
+    assert group1.id == 1
+    assert group1.handle == group2.handle
+
+def test_group_create_no_initial_name():
+    """Test Group.create works without providing a name initially."""
+    model = pydagmc.Model()
+    group = pydagmc.Group.create(model, group_id=5)
+    try:
+        name_val = group.name
+        assert name_val is None or name_val == ''
+    except RuntimeError:
+        pass # Tag not existing is also okay
+
+    group.name = 'assigned_later'
+    assert group.name == 'assigned_later'
+    assert 'assigned_later' in model.groups_by_name
 
 def test_initial_volume_properties_and_groups(fuel_pin_model, fuel_pin_volumes):
     """Tests accessing volumes by ID and their initial material property/group."""
@@ -779,4 +872,3 @@ def test_surface_create_invalid_filename():
     model = pydagmc.Model()
     with pytest.raises(ValueError, match="Only STL files are supported"):
         model.create_surface(filename='my_model.step')
-
