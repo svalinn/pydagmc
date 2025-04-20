@@ -714,3 +714,53 @@ def test_surface_load_file(request):
     # Non-STL file should not be allowed
     with pytest.raises(ValueError):
         model.create_surface(filename='badgers.exe')
+
+def test_surface_sense_runtime_error():
+    """Test surf_sense returns default when tag is missing."""
+    model = pydagmc.Model()
+    surf = model.create_surface(global_id=1)
+    try:
+        model.mb.tag_delete(model.surf_sense_tag, (surf.handle,))
+    except RuntimeError:
+        pass
+    assert surf.surf_sense == [None, None]
+
+
+def test_surface_set_sense_with_none():
+    """Test setting surface sense when one volume is None."""
+    # Use different IDs to avoid potential clashes with other tests
+    model = pydagmc.Model()
+    surf_id = 2
+    vol_id = 11
+    surf = model.create_surface(global_id=surf_id)
+    vol = model.create_volume(global_id=vol_id)
+
+    # Test setting forward=None
+    surf.surf_sense = [None, vol]
+    assert surf.forward_volume is None
+    assert surf.reverse_volume == vol
+    # Check parents: vol added
+    assert set(model.mb.get_parent_meshsets(surf.handle)) == {vol.handle}
+    assert len(model.mb.get_parent_meshsets(surf.handle)) == 1
+
+    # Test setting reverse=None (vol remains parent, None doesn't add)
+    surf.surf_sense = [vol, None]
+    assert surf.forward_volume == vol
+    assert surf.reverse_volume is None
+    # Check parents: vol should still be the only parent
+    assert set(model.mb.get_parent_meshsets(surf.handle)) == {vol.handle}
+    assert len(model.mb.get_parent_meshsets(surf.handle)) == 1
+
+    # Test setting both=None (vol remains parent)
+    surf.surf_sense = [None, None]
+    assert surf.forward_volume is None
+    assert surf.reverse_volume is None
+    # Check parents: vol handle should still be present from previous steps
+    assert set(model.mb.get_parent_meshsets(surf.handle)) == {vol.handle}
+    assert len(model.mb.get_parent_meshsets(surf.handle)) == 1
+
+def test_surface_create_invalid_filename():
+    """Test create_surface with a non-STL file."""
+    model = pydagmc.Model()
+    with pytest.raises(ValueError, match="Only STL files are supported"):
+        model.create_surface(filename='my_model.step')
