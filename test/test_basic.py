@@ -431,11 +431,11 @@ def test_surface(request):
 
     s1.forward_volume = model.volumes_by_id[3]
     assert s1.forward_volume == model.volumes_by_id[3]
-    assert s1.surf_sense == [model.volumes_by_id[3], model.volumes_by_id[2]]
+    assert s1.senses == [model.volumes_by_id[3], model.volumes_by_id[2]]
 
     s1.reverse_volume = model.volumes_by_id[1]
     assert s1.reverse_volume == model.volumes_by_id[1]
-    assert s1.surf_sense == [model.volumes_by_id[3], model.volumes_by_id[1]]
+    assert s1.senses == [model.volumes_by_id[3], model.volumes_by_id[1]]
 
 
 def test_id_safety(request):
