@@ -853,14 +853,14 @@ def test_surface_load_file(request):
         model.create_surface(filename='badgers.exe')
 
 def test_surface_sense_runtime_error():
-    """Test surf_sense returns default when tag is missing."""
+    """Test senses returns default when tag is missing."""
     model = pydagmc.Model()
     surf = model.create_surface(global_id=1)
     try:
         model.mb.tag_delete(model.surf_sense_tag, (surf.handle,))
     except RuntimeError:
         pass
-    assert surf.surf_sense == [None, None]
+    assert surf.senses == [None, None]
 
 def test_surface_set_sense_with_none():
     """
@@ -886,7 +886,7 @@ def test_surface_set_sense_with_none():
     assert len(initial_parents) == 0, "Surface should have no parents initially"
 
     # Test setting forward=None, reverse=vol1
-    surf.surf_sense = [None, vol1]
+    surf.senses = [None, vol1]
     assert surf.forward_volume is None
     assert surf.reverse_volume == vol1
 
@@ -896,7 +896,7 @@ def test_surface_set_sense_with_none():
     assert len(parents_after_none_vol1) == 1
 
     # Test setting forward=vol1, reverse=None
-    surf.surf_sense = [vol1, None]
+    surf.senses = [vol1, None]
     assert surf.forward_volume == vol1
     assert surf.reverse_volume is None
 
@@ -906,7 +906,7 @@ def test_surface_set_sense_with_none():
     assert len(parents_after_vol1_none) == 1
 
     # Test setting forward=vol2, reverse=vol1
-    surf.surf_sense = [vol2, vol1]
+    surf.senses = [vol2, vol1]
     assert surf.forward_volume == vol2
     assert surf.reverse_volume == vol1
     parents_after_vol2_vol1 = model.mb.get_parent_meshsets(surf.handle)
@@ -914,9 +914,9 @@ def test_surface_set_sense_with_none():
     assert len(parents_after_vol2_vol1) == 2
 
     # Test setting both=None
-    # Crucially, the current surf_sense setter *does not remove* existing parents.
+    # Crucially, the current senses setter *does not remove* existing parents.
     # Therefore, vol1 and vol2 handles remain parents.
-    surf.surf_sense = [None, None]
+    surf.senses = [None, None]
     assert surf.forward_volume is None
     assert surf.reverse_volume is None
 
@@ -929,7 +929,7 @@ def test_surface_set_sense_with_none():
 
     # Test setting back to a valid sense
     # Ensure we can re-establish sense and parent links correctly
-    surf.surf_sense = [vol1, vol2]
+    surf.senses = [vol1, vol2]
     assert surf.forward_volume == vol1
     assert surf.reverse_volume == vol2
     parents_final = model.mb.get_parent_meshsets(surf.handle)
