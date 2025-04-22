@@ -993,3 +993,19 @@ def test_get_geom_ent_by_id():
     assert isinstance(retrieved_handle, np.uint64)
     assert retrieved_handle == surface.handle
 
+
+def test_remove_geom_ent_by_id():
+    """Test _remove_geom_ent_by_id."""
+    model = pydagmc.Model()
+    group = model.create_group(name='test_group', group_id=1)
+    surface = model.create_surface(global_id=7)
+    group.add_set(surface)
+
+    # Verify it's there
+    assert 7 in group.surfaces_by_id
+
+    # Remove it
+    group._remove_geom_ent_by_id('Surface', 7)
+
+    # Now check it’s gone
+    assert 7 not in group.surfaces_by_id
