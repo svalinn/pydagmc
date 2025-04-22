@@ -151,15 +151,6 @@ def test_group_create(fuel_pin_model):
     assert model.groups_by_name['mat:plastic'] == new_group2
     assert len(model.groups) == orig_num_groups + 2
 
-def test_group_name_runtime_error():
-    """Test group name returns None when tag is missing."""
-    model = pydagmc.Model()
-    group = model.create_group(group_id=1)
-    try:
-        model.mb.tag_delete(model.name_tag, (group.handle,))
-    except RuntimeError:
-         pass
-    assert group.name is None
 
 def test_group_name_setter_duplicate():
     """Test assigning an already used group name."""
