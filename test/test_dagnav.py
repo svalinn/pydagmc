@@ -980,3 +980,16 @@ def test_geometryset_check_tags_errors(request):
     raw_handle_surf_missing_all = model.mb.create_meshset()
     with pytest.raises(ValueError, match="has no category or geom_dimension"):
         _ = pydagmc.Surface(model, raw_handle_surf_missing_all)
+
+
+def test_get_geom_ent_by_id():
+    """Test _get_geom_ent_by_id."""
+    model = pydagmc.Model()
+    group = model.create_group(name='test_group', group_id=1)
+    surface = model.create_surface(global_id=5)
+    group.add_set(surface)
+
+    retrieved_handle = group._get_geom_ent_by_id('Surface', 5)
+    assert isinstance(retrieved_handle, np.uint64)
+    assert retrieved_handle == surface.handle
+
