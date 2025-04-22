@@ -703,11 +703,11 @@ def test_to_vtk(tmpdir_factory, request, fuel_pin_model):
 
     fuel_group = groups['mat:fuel']
 
-    vtk_filename = str(tmpdir_factory.mktemp('vtk').join('fuel_pin.vtk'))
+    vtk_filename = str(tmpdir_factory.mktemp('vtk').join('fuel_pin'))
 
     fuel_group.to_vtk(vtk_filename)
 
-    vtk_file = open(vtk_filename, 'r')
+    vtk_file = open(vtk_filename + '.vtk', 'r')
 
     gold_name = request.path.parent / 'gold_files' / f'.{request.node.name}.gold'
 
