@@ -196,6 +196,7 @@ def test_group_repr_empty():
     assert '20' in repr_vol_only
     assert 'Surface IDs:' not in repr_vol_only
 
+
 def test_group_add_remove_set_types():
     """Test Group add_set/remove_set with handles and objects."""
     model = pydagmc.Model()
