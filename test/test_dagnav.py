@@ -227,11 +227,8 @@ def test_group_create_no_initial_name():
     """Test Group.create works without providing a name initially."""
     model = pydagmc.Model()
     group = pydagmc.Group.create(model, group_id=5)
-    try:
-        name_val = group.name
-        assert name_val is None
-    except RuntimeError:
-        pass # Tag not existing is also okay
+    name_val = group.name
+    assert name_val is None
 
     group.name = 'assigned_later'
     assert group.name == 'assigned_later'
@@ -848,10 +845,7 @@ def test_surface_sense_runtime_error():
     """Test senses returns default when tag is missing."""
     model = pydagmc.Model()
     surf = model.create_surface(global_id=1)
-    try:
-        model.mb.tag_delete(model.surf_sense_tag, (surf.handle,))
-    except RuntimeError:
-        pass
+    model.mb.tag_delete(model.surf_sense_tag, (surf.handle,))
     assert surf.senses == [None, None]
 
 def test_surface_set_sense_with_none():
@@ -941,10 +935,7 @@ def test_geometryset_category_runtime_error(request):
     model = pydagmc.Model()
     raw_handle = model.mb.create_meshset()
     model.mb.tag_set_data(model.geom_dimension_tag, raw_handle, 2)
-    try:
-        model.mb.tag_delete(model.category_tag, (raw_handle,))
-    except RuntimeError:
-        pass
+    model.mb.tag_delete(model.category_tag, (raw_handle,))
     geom_set = pydagmc.GeometrySet(model, raw_handle)
     assert geom_set.category is None
 
