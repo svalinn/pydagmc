@@ -902,6 +902,29 @@ def test_surface_load_file(request):
         model.create_surface(filename='badgers.exe')
 
 
+def test_surface_sense_value_error_on_wrong_length():
+    """Test ValueError is raised when when the senses doesn't contain two volumes."""
+    model = pydagmc.Model()
+    surf = model.create_surface(global_id=1)
+
+    # Create dummy volumes for valid input
+    vol1 = model.create_volume(global_id=1)
+    
+    # Empty list
+    with pytest.raises(ValueError, match="Senses should be a list of two volumes."):
+        surf.senses = []
+
+    # Only one volume
+    with pytest.raises(ValueError, match="Senses should be a list of two volumes."):
+        surf.senses = [vol1]
+
+    # More than two volumes
+    vol2 = model.create_volume(global_id=2)
+    vol3 = model.create_volume(global_id=3)
+    with pytest.raises(ValueError, match="Senses should be a list of two volumes."):
+        surf.senses = [vol1, vol2, vol3]
+
+
 def test_surface_sense_runtime_error():
     """Test senses returns default when tag is missing."""
     model = pydagmc.Model()
