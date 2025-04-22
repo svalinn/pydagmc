@@ -98,6 +98,41 @@ def test_basic_functionality(request, fuel_pin_model, capfd):
         assert out == f.read()
 
 
+def test_model_required_tags_exist(fuel_pin_model):
+    """
+    Ensure that key PyMOAB tags are defined by the Model and can be accessed
+    on relevant entity types to avoid RuntimeErrors in usage.
+    """
+    model = fuel_pin_model
+    mb = model.mb  # PyMOAB Core instance
+
+    required_tags = {
+        "NAME": model.name_tag,
+        "CATEGORY": model.category_tag,
+        "SURFACE_SENSE": model.surf_sense_tag
+    }
+
+    # Map tag relevance to specific entity types
+    # TODO: We should emplement tag_get_type on the PyMOAB Core
+    test_targets = {
+        "NAME": model.groups[:1],               # Groups typically have NAME
+        "CATEGORY": model.volumes[:1],          # CATEGORY is usually on volumes/surfaces
+        "SURFACE_SENSE": model.surfaces[:1]     # Only surfaces should have this
+    }
+
+    for tag_name, tag_handle in required_tags.items():
+        entities = test_targets.get(tag_name, [])
+        if not entities:
+            pytest.fail(f"No entities found to test tag '{tag_name}'.")
+
+        for entity in entities:
+            data = mb.tag_get_data(tag_handle, [entity.handle])
+            assert data is not None
+            break
+        else:
+            pytest.fail(f"Required tag '{tag_name}' is missing or inaccessible on relevant entities.")
+
+
 def test_group_merge(fuel_pin_model):
     model = fuel_pin_model
     groups = model.groups_by_name
