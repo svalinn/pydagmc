@@ -160,6 +160,7 @@ def test_group_name_setter_duplicate():
     with pytest.raises(ValueError, match="Group group_a already used"):
         group2.name = 'group_a'
 
+
 def test_group_repr_empty():
     """Test Group.__repr__ with no volumes/surfaces."""
     model = pydagmc.Model()
@@ -214,6 +215,7 @@ def test_group_merge_name_mismatch():
     with pytest.raises(ValueError, match="names group_one and group_two do not match"):
         group1.merge(group2)
 
+
 def test_group_create_existing_name():
     """Test Group.create returns existing group if name matches."""
     model = pydagmc.Model()
@@ -222,6 +224,7 @@ def test_group_create_existing_name():
     assert group1 == group2
     assert group1.id == 1
     assert group1.handle == group2.handle
+
 
 def test_group_create_no_initial_name():
     """Test Group.create works without providing a name initially."""
@@ -233,6 +236,7 @@ def test_group_create_no_initial_name():
     group.name = 'assigned_later'
     assert group.name == 'assigned_later'
     assert 'assigned_later' in model.groups_by_name
+
 
 def test_bad_group_id(request, fuel_pin_model):
     model = fuel_pin_model
@@ -440,6 +444,7 @@ def test_volumes_without_material_after_creation(fuel_pin_model):
     assert new_vol1 not in unassigned_final
     assert new_vol2 not in unassigned_final
 
+
 def test_volume_material_setter_existing_group():
     """Test changing material when already in a material group."""
     model = pydagmc.Model()
@@ -455,6 +460,7 @@ def test_volume_material_setter_existing_group():
     water_group_after = model.groups_by_name['mat:water']
     assert vol not in water_group_after.volumes
     assert len(water_group_after.volumes) == 0
+
 
 def test_volume_creation(fuel_pin_model):
     """Tests creating new volumes via Volume.create and model.create_volume."""
@@ -818,6 +824,7 @@ def test_add_groups(fuel_pin_model):
     assert [27, 28, 29] == sorted(groups['boundary:Reflecting'].surface_ids)
     assert [24, 25] == sorted(groups['boundary:Vacuum'].surface_ids)
 
+
 def test_add_groups_bad_id():
     """Test add_groups when an ID in the map doesn't exist."""
     model = pydagmc.Model()
@@ -832,6 +839,7 @@ def test_add_groups_bad_id():
     with pytest.raises(ValueError, match="GeometrySet ID=999 could not be found"):
         model.add_groups(group_map_bad_surf)
 
+
 def test_surface_load_file(request):
     model = pydagmc.Model()
     surface = model.create_surface(filename=request.path.parent / 'cube.stl')
@@ -840,6 +848,7 @@ def test_surface_load_file(request):
     # Non-STL file should not be allowed
     with pytest.raises(ValueError):
         model.create_surface(filename='badgers.exe')
+
 
 def test_surface_sense_runtime_error():
     """Test senses returns default when tag is missing."""
@@ -855,6 +864,7 @@ def test_surface_create_invalid_filename():
     with pytest.raises(ValueError, match="Only STL files are supported"):
         model.create_surface(filename='my_model.step')
 
+
 def test_geometryset_category_runtime_error(request):
     """Test category returns None when tag is missing."""
     model = pydagmc.Model()
@@ -864,6 +874,7 @@ def test_geometryset_category_runtime_error(request):
     geom_set = pydagmc.GeometrySet(model, raw_handle)
     assert geom_set.category is None
 
+
 def test_geometryset_id_setter_duplicate(request):
     """Test assigning an already used ID."""
     model = pydagmc.Model()
@@ -871,6 +882,7 @@ def test_geometryset_id_setter_duplicate(request):
     vol2 = model.create_volume(global_id=20)
     with pytest.raises(ValueError, match="ID 10 is already in use"):
         vol2.id = 10
+
 
 def test_geometryset_check_tags_errors(request):
     """Test _check_category_and_dimension error conditions."""
