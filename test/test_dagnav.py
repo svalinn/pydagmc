@@ -238,7 +238,7 @@ def test_group_create_no_initial_name():
     group = pydagmc.Group.create(model, group_id=5)
     try:
         name_val = group.name
-        assert name_val is None or name_val == ''
+        assert name_val is None
     except RuntimeError:
         pass # Tag not existing is also okay
 
