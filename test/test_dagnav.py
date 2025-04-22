@@ -683,6 +683,23 @@ def test_compressed_coords(fuel_pin_model, capfd):
     assert (coords[conn_map[tris[0]]].size == 9)
 
 
+def test_triangle_coords(fuel_pin_model):
+    """Test the triangle_coords property."""
+    model = fuel_pin_model
+    groups = model.groups_by_name
+
+    fuel_group = groups['mat:fuel']
+    v1 = fuel_group.volumes_by_id[1]
+
+    coords = v1.triangle_coords
+
+    # Basic checks to ensure the property returns what it's supposed to
+    assert isinstance(coords, np.ndarray)
+    assert coords.ndim == 2
+    assert coords.shape[1] == 3  # Must be (N, 3)
+    assert coords.dtype == np.float64
+
+
 def test_coords(fuel_pin_model, capfd):
     model = fuel_pin_model
     groups = model.groups_by_name
