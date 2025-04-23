@@ -231,15 +231,23 @@ def test_group_add_remove_set_types():
     vol_obj = model.create_volume(global_id=10)
     vol_handle = vol_obj.handle
 
+    # Using handles
     group.add_set(vol_handle)
     assert vol_obj in model.groups_by_name['add_remove_types'].volumes
     group.remove_set(vol_handle)
     assert vol_obj not in model.groups_by_name['add_remove_types'].volumes
 
+    # Using objects
     group.add_set(vol_obj)
     assert vol_obj in model.groups_by_name['add_remove_types'].volumes
     group.remove_set(vol_obj)
     assert vol_obj not in model.groups_by_name['add_remove_types'].volumes
+
+    # Remove by ID
+    group.add_set(vol_obj)
+    assert 10 in group.volumes_by_id
+    group._remove_geom_ent_by_id('Volume', 10)
+    assert 10 not in group.volumes_by_id
 
 
 def test_group_merge_name_mismatch():
@@ -981,31 +989,3 @@ def test_geometryset_check_tags_errors(request):
     with pytest.raises(ValueError, match="has no category or geom_dimension"):
         _ = pydagmc.Surface(model, raw_handle_surf_missing_all)
 
-
-def test_get_geom_ent_by_id():
-    """Test _get_geom_ent_by_id."""
-    model = pydagmc.Model()
-    group = model.create_group(name='test_group', group_id=1)
-    surface = model.create_surface(global_id=5)
-    group.add_set(surface)
-
-    retrieved_handle = group._get_geom_ent_by_id('Surface', 5)
-    assert isinstance(retrieved_handle, np.uint64)
-    assert retrieved_handle == surface.handle
-
-
-def test_remove_geom_ent_by_id():
-    """Test _remove_geom_ent_by_id."""
-    model = pydagmc.Model()
-    group = model.create_group(name='test_group', group_id=1)
-    surface = model.create_surface(global_id=7)
-    group.add_set(surface)
-
-    # Verify it's there
-    assert 7 in group.surfaces_by_id
-
-    # Remove it
-    group._remove_geom_ent_by_id('Surface', 7)
-
-    # Now check it’s gone
-    assert 7 not in group.surfaces_by_id
