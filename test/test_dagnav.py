@@ -1,11 +1,8 @@
 from pathlib import Path
 import urllib.request
-
 import pytest
 import numpy as np
-
 from test import config
-
 from pymoab import core
 
 import pydagmc
@@ -61,9 +58,8 @@ def test_model_repr(fuel_pin_model):
     assert model_str == 'Model: 4 Volumes, 21 Surfaces, 5 Groups'
 
 
-def test_basic_functionality(request, capfd):
-    test_file = str(request.path.parent / 'fuel_pin.h5m')
-    model = pydagmc.Model(test_file)
+def test_basic_functionality(request, fuel_pin_model, capfd):
+    model = fuel_pin_model
     groups = model.groups_by_name
     print(groups)
     # ensure that the groups attribude is indexable
@@ -102,9 +98,43 @@ def test_basic_functionality(request, capfd):
         assert out == f.read()
 
 
-def test_group_merge(request):
-    test_file = str(request.path.parent / 'fuel_pin.h5m')
-    model = pydagmc.Model(test_file)
+def test_model_required_tags_exist(fuel_pin_model):
+    """
+    Ensure that key PyMOAB tags are defined by the Model and can be accessed
+    on relevant entity types to avoid RuntimeErrors in usage.
+    """
+    model = fuel_pin_model
+    mb = model.mb  # PyMOAB Core instance
+
+    required_tags = {
+        "NAME": model.name_tag,
+        "CATEGORY": model.category_tag,
+        "SURFACE_SENSE": model.surf_sense_tag
+    }
+
+    # Map tag relevance to specific entity types
+    # TODO: We should emplement tag_get_type on the PyMOAB Core
+    test_targets = {
+        "NAME": model.groups[:1],               # Groups typically have NAME
+        "CATEGORY": model.volumes[:1],          # CATEGORY is usually on volumes/surfaces
+        "SURFACE_SENSE": model.surfaces[:1]     # Only surfaces should have this
+    }
+
+    for tag_name, tag_handle in required_tags.items():
+        entities = test_targets.get(tag_name, [])
+        if not entities:
+            pytest.fail(f"No entities found to test tag '{tag_name}'.")
+
+        for entity in entities:
+            data = mb.tag_get_data(tag_handle, [entity.handle])
+            assert data is not None
+            break
+        else:
+            pytest.fail(f"Required tag '{tag_name}' is missing or inaccessible on relevant entities.")
+
+
+def test_group_merge(fuel_pin_model):
+    model = fuel_pin_model
     groups = model.groups_by_name
 
     orig_group = groups['mat:fuel']
@@ -142,9 +172,8 @@ def test_group_merge(request):
     assert 3 in fuel_group.volumes_by_id
 
 
-def test_group_create(request):
-    test_file = str(request.path.parent / 'fuel_pin.h5m')
-    model = pydagmc.Model(test_file)
+def test_group_create(fuel_pin_model):
+    model = fuel_pin_model
     orig_num_groups = len(model.groups)
 
     # Create two new groups
@@ -156,6 +185,100 @@ def test_group_create(request):
     assert model.groups_by_name['mat:slime'] == new_group1
     assert model.groups_by_name['mat:plastic'] == new_group2
     assert len(model.groups) == orig_num_groups + 2
+
+
+def test_group_name_setter_duplicate():
+    """Test assigning an already used group name."""
+    model = pydagmc.Model()
+    group1 = model.create_group(name='group_a', group_id=1)
+    group2 = model.create_group(name='group_b', group_id=2)
+    with pytest.raises(ValueError, match="Group group_a already used"):
+        group2.name = 'group_a'
+
+
+def test_group_repr_empty():
+    """Test Group.__repr__ with no volumes/surfaces."""
+    model = pydagmc.Model()
+    group_empty = model.create_group(name='empty_group', group_id=1)
+    repr_empty = repr(group_empty)
+    assert 'Name: empty_group' in repr_empty
+    assert 'Volume IDs:' not in repr_empty
+    assert 'Surface IDs:' not in repr_empty
+
+    group_surf_only = model.create_group(name='surf_only', group_id=2)
+    surf = model.create_surface(global_id=10)
+    group_surf_only.add_set(surf)
+    repr_surf_only = repr(group_surf_only)
+    assert 'Name: surf_only' in repr_surf_only
+    assert 'Volume IDs:' not in repr_surf_only
+    assert 'Surface IDs:' in repr_surf_only
+    assert '10' in repr_surf_only
+
+    group_vol_only = model.create_group(name='vol_only', group_id=3)
+    vol = model.create_volume(global_id=20)
+    group_vol_only.add_set(vol)
+    repr_vol_only = repr(group_vol_only)
+    assert 'Name: vol_only' in repr_vol_only
+    assert 'Volume IDs:' in repr_vol_only
+    assert '20' in repr_vol_only
+    assert 'Surface IDs:' not in repr_vol_only
+
+
+def test_group_add_remove_set_types():
+    """Test Group add_set/remove_set with handles and objects."""
+    model = pydagmc.Model()
+    group = model.create_group(name='add_remove_types', group_id=1)
+    vol_obj = model.create_volume(global_id=10)
+    vol_handle = vol_obj.handle
+
+    # Using handles
+    group.add_set(vol_handle)
+    assert vol_obj in model.groups_by_name['add_remove_types'].volumes
+    group.remove_set(vol_handle)
+    assert vol_obj not in model.groups_by_name['add_remove_types'].volumes
+
+    # Using objects
+    group.add_set(vol_obj)
+    assert vol_obj in model.groups_by_name['add_remove_types'].volumes
+    group.remove_set(vol_obj)
+    assert vol_obj not in model.groups_by_name['add_remove_types'].volumes
+
+    # Remove by ID
+    group.add_set(vol_obj)
+    assert 10 in group.volumes_by_id
+    group._remove_geom_ent_by_id('Volume', 10)
+    assert 10 not in group.volumes_by_id
+
+
+def test_group_merge_name_mismatch():
+    """Test merging groups with different names."""
+    model = pydagmc.Model()
+    group1 = model.create_group(name='group_one', group_id=1)
+    group2 = model.create_group(name='group_two', group_id=2)
+    with pytest.raises(ValueError, match="names group_one and group_two do not match"):
+        group1.merge(group2)
+
+
+def test_group_create_existing_name():
+    """Test Group.create returns existing group if name matches."""
+    model = pydagmc.Model()
+    group1 = model.create_group(name='my_unique_group', group_id=1)
+    group2 = pydagmc.Group.create(model, name='my_unique_group', group_id=99)
+    assert group1 == group2
+    assert group1.id == 1
+    assert group1.handle == group2.handle
+
+
+def test_group_create_no_initial_name():
+    """Test Group.create works without providing a name initially."""
+    model = pydagmc.Model()
+    group = pydagmc.Group.create(model, group_id=5)
+    name_val = group.name
+    assert name_val is None
+
+    group.name = 'assigned_later'
+    assert group.name == 'assigned_later'
+    assert 'assigned_later' in model.groups_by_name
 
 
 def test_bad_group_id(request, fuel_pin_model):
@@ -365,6 +488,23 @@ def test_volumes_without_material_after_creation(fuel_pin_model):
     assert new_vol2 not in unassigned_final
 
 
+def test_volume_material_setter_existing_group():
+    """Test changing material when already in a material group."""
+    model = pydagmc.Model()
+    vol = model.create_volume(1)
+    vol.material = 'water'
+    water_group = model.groups_by_name['mat:water']
+    assert vol in water_group.volumes
+
+    vol.material = 'steel'
+    steel_group = model.groups_by_name['mat:steel']
+    assert vol in steel_group.volumes
+
+    water_group_after = model.groups_by_name['mat:water']
+    assert vol not in water_group_after.volumes
+    assert len(water_group_after.volumes) == 0
+
+
 def test_volume_creation(fuel_pin_model):
     """Tests creating new volumes via Volume.create and model.create_volume."""
     model = fuel_pin_model
@@ -432,9 +572,8 @@ def test_assign_material_to_new_volume(fuel_pin_model):
     assert len(water_vols_method) == 1
 
 
-def test_surface(request):
-    test_file = str(request.path.parent / 'fuel_pin.h5m')
-    model = pydagmc.Model(test_file)
+def test_surface(fuel_pin_model):
+    model = fuel_pin_model
 
     s1 = model.surfaces_by_id[1]
     assert s1.volumes == [model.volumes_by_id[1], model.volumes_by_id[2]]
@@ -450,9 +589,8 @@ def test_surface(request):
     assert s1.senses == [model.volumes_by_id[3], model.volumes_by_id[1]]
 
 
-def test_id_safety(request):
-    test_file = str(request.path.parent / 'fuel_pin.h5m')
-    model = pydagmc.Model(test_file)
+def test_id_safety(fuel_pin_model):
+    model = fuel_pin_model
 
     v1 = model.volumes_by_id[1]
 
@@ -534,9 +672,9 @@ def test_hash(request):
     assert len(d) == len(model.groups) + len(model1.groups)
 
 
-def test_compressed_coords(request, capfd):
-    test_file = str(request.path.parent / 'fuel_pin.h5m')
-    groups = pydagmc.Model(test_file).groups_by_name
+def test_compressed_coords(fuel_pin_model, capfd):
+    model = fuel_pin_model
+    groups = model.groups_by_name
 
     fuel_group = groups['mat:fuel']
     v1 = fuel_group.volumes_by_id[1]
@@ -553,9 +691,25 @@ def test_compressed_coords(request, capfd):
     assert (coords[conn_map[tris[0]]].size == 9)
 
 
-def test_coords(request, capfd):
-    test_file = str(request.path.parent / 'fuel_pin.h5m')
-    model = pydagmc.Model(test_file)
+def test_triangle_coords(fuel_pin_model):
+    """Test the triangle_coords property."""
+    model = fuel_pin_model
+    groups = model.groups_by_name
+
+    fuel_group = groups['mat:fuel']
+    v1 = fuel_group.volumes_by_id[1]
+
+    coords = v1.triangle_coords
+
+    # Basic checks to ensure the property returns what it's supposed to
+    assert isinstance(coords, np.ndarray)
+    assert coords.ndim == 2
+    assert coords.shape[1] == 3  # Must be (N, 3)
+    assert coords.dtype == np.float64
+
+
+def test_coords(fuel_pin_model, capfd):
+    model = fuel_pin_model
     groups = model.groups_by_name
 
     group = groups['mat:fuel']
@@ -568,17 +722,17 @@ def test_coords(request, capfd):
     conn, coords = surface.get_triangle_conn_and_coords(compress=True)
 
 
-def test_to_vtk(tmpdir_factory, request):
-    test_file = str(request.path.parent / 'fuel_pin.h5m')
-    groups = pydagmc.Model(test_file).groups_by_name
+def test_to_vtk(tmpdir_factory, request, fuel_pin_model):
+    model = fuel_pin_model
+    groups = model.groups_by_name
 
     fuel_group = groups['mat:fuel']
 
-    vtk_filename = str(tmpdir_factory.mktemp('vtk').join('fuel_pin.vtk'))
+    vtk_filename = str(tmpdir_factory.mktemp('vtk').join('fuel_pin'))
 
     fuel_group.to_vtk(vtk_filename)
 
-    vtk_file = open(vtk_filename, 'r')
+    vtk_file = open(vtk_filename + '.vtk', 'r')
 
     gold_name = request.path.parent / 'gold_files' / f'.{request.node.name}.gold'
 
@@ -668,9 +822,8 @@ def test_delete(fuel_pin_model):
     assert 'mat:fuel' not in model.groups_by_name
 
 
-def test_write(request, tmpdir):
-    test_file = str(request.path.parent / 'fuel_pin.h5m')
-    model = pydagmc.Model(test_file)
+def test_write(fuel_pin_model, tmpdir):
+    model = fuel_pin_model
     model.volumes_by_id[1].id = 12345
     model.write_file('fuel_pin_copy.h5m')
 
@@ -678,9 +831,8 @@ def test_write(request, tmpdir):
     assert 12345 in model.volumes_by_id
 
 
-def test_volume_value(request):
-    test_file = str(request.path.parent / 'fuel_pin.h5m')
-    model = pydagmc.Model(test_file)
+def test_volume_value(fuel_pin_model):
+    model = fuel_pin_model
     exp_vols = {1: np.pi * 7**2 * 40,
                 2: np.pi * (9**2 - 7**2) * 40,
                 3: np.pi * (10**2 - 9**2) * 40,}
@@ -689,9 +841,8 @@ def test_volume_value(request):
     pytest.approx(model.volumes_by_id[3].volume, exp_vols[3])
 
 
-def test_area(request):
-    test_file = str(request.path.parent / 'fuel_pin.h5m')
-    model = pydagmc.Model(test_file)
+def test_area(fuel_pin_model):
+    model = fuel_pin_model
     exp_areas = {1: 2 * np.pi * 7 * 40,
                  2: np.pi * 7**2,
                  3: np.pi * 7**2,
@@ -705,9 +856,8 @@ def test_area(request):
         pytest.approx(model.surfaces[surf_id].area, exp_area)
 
 
-def test_add_groups(request):
-    test_file = str(request.path.parent / 'fuel_pin.h5m')
-    model = pydagmc.Model(test_file)
+def test_add_groups(fuel_pin_model):
+    model = fuel_pin_model
     volumes = model.volumes_by_id
     surfaces = model.surfaces_by_id
 
@@ -735,6 +885,21 @@ def test_add_groups(request):
     assert [24, 25] == sorted(groups['boundary:Vacuum'].surface_ids)
 
 
+def test_add_groups_bad_id():
+    """Test add_groups when an ID in the map doesn't exist."""
+    model = pydagmc.Model()
+    model.create_volume(global_id=1)
+    model.create_surface(global_id=10)
+
+    group_map_bad_vol = {("group_a", 1): [1, 99]}
+    with pytest.raises(ValueError, match="GeometrySet ID=99 could not be found"):
+        model.add_groups(group_map_bad_vol)
+
+    group_map_bad_surf = {("group_b", 2): [999]}
+    with pytest.raises(ValueError, match="GeometrySet ID=999 could not be found"):
+        model.add_groups(group_map_bad_surf)
+
+
 def test_surface_load_file(request):
     model = pydagmc.Model()
     surface = model.create_surface(filename=request.path.parent / 'cube.stl')
@@ -743,3 +908,84 @@ def test_surface_load_file(request):
     # Non-STL file should not be allowed
     with pytest.raises(ValueError):
         model.create_surface(filename='badgers.exe')
+
+
+def test_surface_sense_value_error_on_wrong_length():
+    """Test ValueError is raised when when the senses doesn't contain two volumes."""
+    model = pydagmc.Model()
+    surf = model.create_surface(global_id=1)
+
+    # Create dummy volumes for valid input
+    vol1 = model.create_volume(global_id=1)
+    
+    # Empty list
+    with pytest.raises(ValueError, match="Senses should be a list of two volumes."):
+        surf.senses = []
+
+    # Only one volume
+    with pytest.raises(ValueError, match="Senses should be a list of two volumes."):
+        surf.senses = [vol1]
+
+    # More than two volumes
+    vol2 = model.create_volume(global_id=2)
+    vol3 = model.create_volume(global_id=3)
+    with pytest.raises(ValueError, match="Senses should be a list of two volumes."):
+        surf.senses = [vol1, vol2, vol3]
+
+
+def test_surface_sense_runtime_error():
+    """Test senses returns default when tag is missing."""
+    model = pydagmc.Model()
+    surf = model.create_surface(global_id=1)
+    model.mb.tag_delete(model.surf_sense_tag, (surf.handle,))
+    assert surf.senses == [None, None]
+
+
+def test_surface_create_invalid_filename():
+    """Test create_surface with a non-STL file."""
+    model = pydagmc.Model()
+    with pytest.raises(ValueError, match="Only STL files are supported"):
+        model.create_surface(filename='my_model.step')
+
+
+def test_geometryset_category_runtime_error(request):
+    """Test category returns None when tag is missing."""
+    model = pydagmc.Model()
+    raw_handle = model.mb.create_meshset()
+    model.mb.tag_set_data(model.geom_dimension_tag, raw_handle, 2)
+    model.mb.tag_delete(model.category_tag, (raw_handle,))
+    geom_set = pydagmc.GeometrySet(model, raw_handle)
+    assert geom_set.category is None
+
+
+def test_geometryset_id_setter_duplicate(request):
+    """Test assigning an already used ID."""
+    model = pydagmc.Model()
+    vol1 = model.create_volume(global_id=10)
+    vol2 = model.create_volume(global_id=20)
+    with pytest.raises(ValueError, match="ID 10 is already in use"):
+        vol2.id = 10
+
+
+def test_geometryset_check_tags_errors(request):
+    """Test _check_category_and_dimension error conditions."""
+    # Dimension assigned, but wrong
+    model = pydagmc.Model()
+    raw_handle_surf_bad_dim = model.mb.create_meshset()
+    model.mb.tag_set_data(model.geom_dimension_tag, raw_handle_surf_bad_dim, 3)
+    model.mb.tag_set_data(model.category_tag, raw_handle_surf_bad_dim, 'Surface')
+    with pytest.raises(ValueError, match="has geom_dimension=3"):
+        _ = pydagmc.Surface(model, raw_handle_surf_bad_dim)
+
+    # Category assigned, but wrong
+    raw_handle_surf_bad_cat = model.mb.create_meshset()
+    model.mb.tag_set_data(model.geom_dimension_tag, raw_handle_surf_bad_cat, 2)
+    model.mb.tag_set_data(model.category_tag, raw_handle_surf_bad_cat, 'Volume')
+    with pytest.raises(ValueError, match="has category=Volume"):
+        _ = pydagmc.Surface(model, raw_handle_surf_bad_cat)
+
+    # Both missing
+    raw_handle_surf_missing_all = model.mb.create_meshset()
+    with pytest.raises(ValueError, match="has no category or geom_dimension"):
+        _ = pydagmc.Surface(model, raw_handle_surf_missing_all)
+
