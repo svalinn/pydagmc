@@ -17,54 +17,35 @@ jobs:
         with:
           submodules: true
 
-      - name: Apt dependencies
-        shell: bash
-        run: |
-          sudo apt -y update
-          sudo apt install -y libgcc-9-dev \
-                              libstdc++-9-dev \
-                              libembree-dev \
-                              python3-dev \
-                              libhdf5-dev \
-                              libeigen3-dev \
-                              cmake
+      - name: Setup Conda
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          channels: conda-forge
+          mamba-version: "*"
+          auto-activate-base: false
+          activate-environment: pydagmc-ci
 
-      - name: Python dependencies
-        shell: bash
+      - name: Install MOAB
+        shell: bash -l {0}
         run: |
-          pip3 install numpy \
-                      cython==0.29.37 \
-                      scipy \
-                      matplotlib \
-                      h5py \
-                      pytest \
-                      pytest-cov \
-                      codecov
+          conda install -y -c conda-forge moab=5.5.1
 
-      - name: Build MOAB
-        shell: bash
+      - name: Install PyDAGMC
+        shell: bash -l {0}
         run: |
-          cd ~
-          git clone https://bitbucket.org/fathomteam/moab.git
-          cd moab
-          git checkout 5.5.1
-          mkdir build
-          cd build
-          cmake -DENABLE_HDF5=ON -DENABLE_BLASLAPACK=OFF -DENABLE_PYMOAB=ON -DCMAKE_INSTALL_PREFIX=$HOME/opt -DCMAKE_BUILD_TYPE=Release ..
-          make -j4
-          make install
-          cd pymoab
-          pip3 install .
+          pip install -e .[test,ci]
 
-      - name: Install
-        shell: bash
+      - name: Test PyDAGMC
+        shell: bash -l {0}
         run: |
-          pip install .
+          pytest . -v --cov=src/pydagmc --cov-branch --cov-report=xml --cov-report=term-missing
 
-      - name: Test
-        shell: bash
-        run: |
-          pytest -v .
+      - name: Upload coverage
+        uses: codecov/codecov-action@v5
+        with:
+          file: coverage.xml
+          flags: unittests
+          name: codecov-umbrella
 
       - name: tmate debug
         if: ${{ failure() }}

@@ -1,5 +1,5 @@
 """
-This file includes the DAGModel module which is designed to manage and
+This file includes the pydagmc module which is designed to manage and
 manipulate hierarchical geometric data structures used in computational
 modeling and simulation built upon the PyMOAB package.
 """
@@ -8,9 +8,13 @@ from __future__ import annotations
 from abc import abstractmethod
 from functools import cached_property
 from itertools import chain
-from typing import Optional, Dict
+import os
+from pathlib import Path
+from typing import Optional, Dict, Union
+from collections import defaultdict
 from warnings import warn
 import numpy as np
+import difflib
 
 try:
     from pymoab import core, types, rng, tag
@@ -25,15 +29,21 @@ except ImportError as e:
     '''
     raise ModuleNotFoundError(msg) from e
 
+# Type for arguments that accept file paths
+PathLike = Union[str, os.PathLike]
 
-class DAGModel:
 
-    def __init__(self, moab_file):
+class Model:
+
+    mb: core.Core
+
+    def __init__(self, moab_file=None):
         if isinstance(moab_file, core.Core):
             self.mb = moab_file
         else:
             self.mb = core.Core()
-            self.mb.load_file(moab_file)
+            if moab_file is not None:
+                self.mb.load_file(moab_file)
 
         self.used_ids = {}
         self.used_ids[Surface] = set(self.surfaces_by_id.keys())
@@ -61,8 +71,84 @@ class DAGModel:
         return {v.id: v for v in self.volumes}
 
     @property
+    def volumes_by_material(self) -> Dict[str, list[Volume]]:
+        """
+        Returns a dictionary mapping material names to lists of
+        Volume objects associated with that material.
+
+        Material names are derived from group names like "mat:material_name".
+        The dictionary key will be "material_name". Volumes without a
+        material group are excluded.
+
+        Returns
+        -------
+        Dict[str, list[Volume]]
+            A dictionary where keys are material names (str) and values
+            are lists of Volume objects.
+        """
+        material_map: DefaultDict[str, list[Volume]] = defaultdict(list)
+        for volume in self.volumes:
+            if volume.material is None:
+                continue
+            material_map[volume.material].append(volume)
+        return dict(material_map)
+
+    def find_volumes_by_material(self, material_name: str) -> list[Volume]:
+        """
+        Retrieves a list of Volume objects associated with the provided material
+        name.
+
+        If the exact material name is not found, it KeyError is raised
+        suggesting potential close matches for the requested material.
+
+        Parameters
+        ----------
+        material_name : str
+            The name of the material to search for (e.g., "fuel", "water").
+
+        Returns
+        -------
+        list[Volume]
+            A list of Volume objects tagged with the specified material name.
+
+        Raises
+        ------
+        KeyError
+            If the material_name is not found in the model. The error message
+            will include suggestions for similar material names if any exist.
+        """
+        # Use the existing property to get the current mapping
+        all_materials_map = self.volumes_by_material
+
+        if material_name in all_materials_map:
+            return all_materials_map[material_name]
+        else:
+            # Material not found, generate suggestions
+            actual_material_names = list(all_materials_map.keys())
+            suggestions = difflib.get_close_matches(
+                material_name,
+                actual_material_names,
+                n=3,
+                cutoff=0.6
+            )
+
+            error_msg = f"Material '{material_name}' not found."
+            if suggestions:
+                error_msg += f" Did you mean one of these? {', '.join(suggestions)}"
+
+            raise KeyError(error_msg)
+
+    @property
+    def volumes_without_material(self) -> list[Volume]:
+        """
+        Returns a list of Volume objects that have not been assigned
+        a material group (i.e., volume.material is None).
+        """
+        return [volume for volume in self.volumes if volume.material is None]
+
+    @property
     def groups(self):
-        return self.groups_by_name.values()
+        return list(self.groups_by_name.values())
 
     @property
     def groups_by_name(self) -> Dict[str, Group]:
@@ -139,32 +225,42 @@ class DAGModel:
             create_if_missing=True,
         )
 
-    def write_file(self, filename):
+    @cached_property
+    def faceting_tol_tag(self):
+        """Faceting tolerance tag."""
+        return self.mb.tag_get_handle(
+            "FACETING_TOL",
+            1,
+            types.MB_TYPE_DOUBLE,
+            types.MB_TAG_SPARSE,
+            create_if_missing=True,
+        )
+
+    def write_file(self, filename: PathLike):
         """Write the model to a file.
 
         Parameters
         ----------
-        filename : str
+        filename : path-like
             The file to write to.
         """
-        self.mb.write_file(filename)
+        self.mb.write_file(str(filename))
 
     def add_groups(self, group_map):
-        """Adds groups of DAGSets to the model.
+        """Adds groups of GeometrySets to the model.
 
         Parameters
         ----------
         group_map : dict
             A dictionary whose keys are 2-tuples of (str, int) containing the
             group name and group ID respectively and whose values are iterables
-            of DAGSet objects or DAGSet ID numbers.
+            of GeometrySet objects or GeometrySet ID numbers.
         """
         for (group_name, group_id), dagsets in group_map.items():
             # create a new group or get an existing group
             group = Group.create(self, name=group_name, group_id=group_id)
-
             for dagset in dagsets:
-                if isinstance(dagset, DAGSet):
+                if isinstance(dagset, GeometrySet):
                     group.add_set(dagset)
                 else:
                     if dagset in self.volumes_by_id:
@@ -172,7 +268,7 @@ class DAGModel:
                     elif dagset in self.surfaces_by_id:
                         group.add_set(self.surfaces_by_id[dagset])
                     else:
-                        raise ValueError(f"DAGSet ID={dagset} could not be "
+                        raise ValueError(f"GeometrySet ID={dagset} could not be "
                                          "found in model volumes or surfaces.")
 
     def create_group(self, name: Optional[str] = None, group_id: Optional[int] = None) -> Group:
@@ -184,16 +280,39 @@ class DAGModel:
         """Create a new empty volume set"""
         return Volume.create(self, global_id)
 
-    def create_surface(self, global_id: Optional[int] = None) -> Surface:
-        """Create a new empty surface set"""
-        return Surface.create(self, global_id)
+    def create_surface(
+        self,
+        global_id: Optional[int] = None,
+        filename: Optional[PathLike] = None
+    ) -> Surface:
+        """Create a new surface set.
+
+        Parameters
+        ----------
+        global_id : int, optional
+            The global ID of the surface. If None, a new ID will be generated.
+        filename : path-like, optional
+            The file to read from. If None, the surface will be created empty.
+
+        Returns
+        -------
+        Surface
+            The new surface set.
+
+        """
+        surface = Surface.create(self, global_id)
+        if filename is not None:
+            if Path(filename).suffix.lower() != '.stl':
+                raise ValueError("Only STL files are supported for surface creation.")
+            self.mb.load_file(str(filename), surface.handle)
+        return surface
 
 
-class DAGSet:
+class GeometrySet:
     """
     Generic functionality for a DAGMC EntitySet.
     """
-    def __init__(self, model: DAGModel, handle: np.uint64):
+    def __init__(self, model: Model, handle: np.uint64):
         self.model = model
         self.handle = handle
 
@@ -228,7 +347,9 @@ class DAGSet:
             raise ValueError(f"{identifier} has no category or geom_dimension tags assigned.")
 
     def __eq__(self, other):
-        return self.model == other.model and self.handle == other.handle
+        return type(other) == type(self) and \
+               self.model == other.model and \
+               self.handle == other.handle
 
     def __hash__(self):
         return hash((self.handle, id(self.model)))
@@ -302,7 +423,7 @@ class DAGSet:
         """
         r = rng.Range()
         for s in self._get_triangle_sets():
-            handle = s if not isinstance(s, DAGSet) else s.handle
+            handle = s if not isinstance(s, GeometrySet) else s.handle
             r.merge(self.model.mb.get_entities_by_type(handle, types.MBTRI))
         return r
 
@@ -389,9 +510,9 @@ class DAGSet:
 
     def delete(self):
         """Delete this set from the MOAB database, but doesn't
-        delete this DAGSet object.  The object remains but no
+        delete this GeometrySet object.  The object remains but no
         longer refers to anything in the model.  In many cases, it may
-        make sense to delete this DAGSet object immediately following
+        make sense to delete this GeometrySet object immediately following
         this operation."""
         self.model.used_ids[type(self)].discard(self.id)
         self.model.mb.delete_entity(self.handle)
@@ -399,10 +520,10 @@ class DAGSet:
         self.model = None
 
     @classmethod
-    def create(cls, model: DAGModel, global_id: Optional[int] = None) -> DAGSet:
+    def create(cls, model: Model, global_id: Optional[int] = None) -> GeometrySet:
         """Create new set"""
         # Add necessary tags for this meshset to be identified appropriately
-        ent_set = DAGSet(model, model.mb.create_meshset())
+        ent_set = GeometrySet(model, model.mb.create_meshset())
         ent_set.geom_dimension = cls._geom_dimension
         ent_set.category = cls._category
         # Now that the entity set has proper tags, create derived class and return
@@ -411,17 +532,17 @@ class DAGSet:
         return out
 
 
-class Surface(DAGSet):
+class Surface(GeometrySet):
 
     _category = 'Surface'
     _geom_dimension = 2
 
-    def __init__(self, model: DAGModel, handle: np.uint64):
+    def __init__(self, model: Model, handle: np.uint64):
         super().__init__(model, handle)
         self._check_category_and_dimension()
 
     @property
-    def surf_sense(self) -> list[Optional[Volume]]:
+    def senses(self) -> list[Optional[Volume]]:
         """Surface sense data."""
         try:
             handles = self.model.mb.tag_get_data(
@@ -432,10 +553,10 @@ class Surface(DAGSet):
         return [Volume(self.model, handle) if handle != 0 else None
                 for handle in handles]
 
-    @surf_sense.setter
-    def surf_sense(self, volumes: list[Optional[Volume]]):
+    @senses.setter
+    def senses(self, volumes: list[Optional[Volume]]):
         if len(volumes) != 2:
-            raise ValueError("surf_sense should be a list of two volumes.")
+            raise ValueError("Senses should be a list of two volumes.")
         sense_data = [vol.handle if vol is not None else np.uint64(0)
                       for vol in volumes]
         self._tag_set_data(self.model.surf_sense_tag, sense_data)
@@ -448,20 +569,20 @@ class Surface(DAGSet):
     @property
     def forward_volume(self) -> Optional[Volume]:
         """Volume with forward sense with respect to the surface."""
-        return self.surf_sense[0]
+        return self.senses[0]
 
     @forward_volume.setter
     def forward_volume(self, volume: Volume):
-        self.surf_sense = [volume, self.reverse_volume]
+        self.senses = [volume, self.reverse_volume]
 
     @property
     def reverse_volume(self) -> Optional[Volume]:
         """Volume with reverse sense with respect to the surface."""
-        return self.surf_sense[1]
+        return self.senses[1]
 
     @reverse_volume.setter
     def reverse_volume(self, volume: Volume):
-        self.surf_sense = [self.forward_volume, volume]
+        self.senses = [self.forward_volume, volume]
 
     @property
     def volumes(self) -> list[Volume]:
@@ -470,7 +591,7 @@ class Surface(DAGSet):
         return [Volume(self.model, h) for h in self.model.mb.get_parent_meshsets(self.handle)]
 
     @property
-    def num_triangles(self):
+    def num_triangles(self) -> int:
         """Returns the number of triangles in this surface"""
         return len(self.triangle_handles)
 
@@ -478,7 +599,7 @@ class Surface(DAGSet):
         return [self]
 
     @property
-    def area(self):
+    def area(self) -> float:
         """Returns the area of the surface"""
         conn, coords = self.get_triangle_conn_and_coords()
         sum = 0.0
@@ -488,12 +609,12 @@ class Surface(DAGSet):
         return 0.5 * sum
 
 
-class Volume(DAGSet):
+class Volume(GeometrySet):
 
     _category: str = 'Volume'
     _geom_dimension: int = 3
 
-    def __init__(self, model: DAGModel, handle: np.uint64):
+    def __init__(self, model: Model, handle: np.uint64):
         super().__init__(model, handle)
         self._check_category_and_dimension()
 
@@ -530,16 +651,16 @@ class Volume(DAGSet):
         group.add_set(self)
 
     @property
-    def surfaces(self):
+    def surfaces(self) -> list[Surface]:
         """Returns surface objects for all surfaces making up this vollume"""
         return [Surface(self.model, h) for h in self.model.mb.get_child_meshsets(self.handle)]
 
     @property
-    def surfaces_by_id(self):
+    def surfaces_by_id(self) -> dict[int, Surface]:
         return {s.id: s for s in self.surfaces}
 
     @property
-    def num_triangles(self):
+    def num_triangles(self) -> int:
         """Returns the number of triangles in this volume"""
         return sum([s.num_triangles for s in self.surfaces])
 
@@ -547,7 +668,7 @@ class Volume(DAGSet):
         return [s.handle for s in self.surfaces]
 
     @property
-    def volume(self):
+    def volume(self) -> float:
         """Returns the volume of the volume"""
         volume = 0.0
         for surface in self.surfaces:
@@ -562,16 +683,16 @@ class Volume(DAGSet):
         return volume / 6.0
 
 
-class Group(DAGSet):
+class Group(GeometrySet):
 
     _category: str = 'Group'
     _geom_dimension: int = 4
 
-    def __init__(self, model: DAGModel, handle: np.uint64):
+    def __init__(self, model: Model, handle: np.uint64):
         super().__init__(model, handle)
         self._check_category_and_dimension()
 
-    def __contains__(self, ent_set: DAGSet):
+    def __contains__(self, ent_set: GeometrySet):
         return any(vol.handle == ent_set.handle for vol in chain(
             self.volumes, self.surfaces))
 
@@ -614,21 +735,21 @@ class Group(DAGSet):
         return self.model.mb.tag_get_data(self.model.id_tag, self._get_geom_ent_sets(entity_type), flat=True)
 
     @property
-    def volumes(self):
+    def volumes(self) -> list[Volume]:
         """Returns a list of Volume objects for the volumes contained by the group set."""
         return [Volume(self.model, v) for v in self._get_geom_ent_sets('Volume')]
 
     @property
-    def volumes_by_id(self):
+    def volumes_by_id(self) -> dict[int, Volume]:
         return {v.id: v for v in self.volumes}
 
     @property
-    def surfaces(self):
+    def surfaces(self) -> list[Surface]:
         """Returns a list of Surface objects for the surfaces contained by the group set."""
         return [Surface(self.model, s) for s in self._get_geom_ent_sets('Surface')]
 
     @property
-    def surfaces_by_id(self):
+    def surfaces_by_id(self) -> dict[int, Surface]:
         return {s.id: s for s in self.surfaces}
 
     @property
@@ -643,14 +764,14 @@ class Group(DAGSet):
 
     def remove_set(self, ent_set):
         """Remove an entity set from the group."""
-        if isinstance(ent_set, DAGSet):
+        if isinstance(ent_set, GeometrySet):
             self.model.mb.remove_entities(self.handle, [ent_set.handle])
         else:
             self.model.mb.remove_entities(self.handle, [ent_set])
 
     def add_set(self, ent_set):
         """Add an entity set to the group."""
-        if isinstance(ent_set, DAGSet):
+        if isinstance(ent_set, GeometrySet):
             self.model.mb.add_entities(self.handle, [ent_set.handle])
         else:
             self.model.mb.add_entities(self.handle, [ent_set])
@@ -686,7 +807,7 @@ class Group(DAGSet):
         other_group.handle = self.handle
 
     @classmethod
-    def create(cls, model: DAGModel, name: Optional[str] = None, group_id: Optional[int] = None) -> Group:
+    def create(cls, model: Model, name: Optional[str] = None, group_id: Optional[int] = None) -> Group:
         """Create a new group instance with the given name,
         or return an existing group if one exists."""
 
@@ -696,16 +817,16 @@ class Group(DAGSet):
                 return model.groups_by_name[name]
 
         # add necessary tags for this meshset to be identified as a group
-        ent_set = DAGSet(model, model.mb.create_meshset())
+        ent_set = GeometrySet(model, model.mb.create_meshset())
         ent_set.category = cls._category
         ent_set.geom_dimension = cls._geom_dimension
 
         # Now that entity set has proper tags, create Group, assign name, and return
         group = cls(model, ent_set.handle)
 
-        group.id = group_id
-
         if name is not None:
             group.name = name
+
+        group.id = group_id
 
         return group

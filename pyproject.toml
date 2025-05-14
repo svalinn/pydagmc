@@ -13,8 +13,12 @@ authors = [
     { name = "Paul Romano", email = "paul.k.romano@gmail.com" },
     { name = "Ethan Peterson", email = "ethan.peterson@mit.edu" },
     { name = "Ahnaf Tahmid Chowdhury", email = "tahmid@nukehub.org" },
+    { name = "Jonathan Shimwell", email = "drshimwell@gmail.com" }
 ]
-description = "A convenience interface for examining DAGMC models using PyMOAB"
+description = """
+A convenience interface for examining,
+modifying, and creating, DAGMC models using PyMOAB
+"""
 readme = "README.md"
 license = { text = "MIT" }
 classifiers = [
@@ -29,11 +33,13 @@ classifiers = [
     "Programming Language :: Python :: 3",
 ]
 requires-python = ">=3.8"
+# TODO: add PyMOAB once on PyPI
 dependencies = ["numpy"]
 
 # Optional Dependencies
 [project.optional-dependencies]
 test = ["pytest"]
+ci = ["pytest-cov"]
 
 # Project URLs
 [project.urls]
