@@ -31,10 +31,16 @@ jobs:
           python -m pip install --upgrade pip
           pip install build
 
-      - name: Build package
+      - name: Build wheel
         run: |
           python -m build -w
 
-      - name: Publish package distributions to PyPI
+      - name: Publish to TestPyPI (on manual dispatch)
+        if: github.event_name == 'workflow_dispatch'
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+
+      - name: Publish to PyPI (on release)
         if: github.event_name == 'release'
         uses: pypa/gh-action-pypi-publish@release/v1
