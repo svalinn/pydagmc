@@ -31,18 +31,37 @@ classifiers = [
     "Operating System :: OS Independent",
     "Topic :: Scientific/Engineering",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
 ]
 requires-python = ">=3.8"
-# TODO: add PyMOAB once on PyPI
+# TODO: add MOAB once on PyPI
 dependencies = ["numpy"]
 
 # Optional Dependencies
 [project.optional-dependencies]
 test = ["pytest"]
 ci = ["pytest-cov"]
+docs = [
+    "sphinx>=5.0",
+    "myst-parser",
+    "linkify-it-py",
+    "sphinx-book-theme",
+    "sphinx-copybutton",
+    "sphinx-design",
+    "sphinx-tabs",
+    "sphinx-togglebutton",
+    "nbsphinx",
+    "sphinx-autodoc-typehints",
+    "sphinxcontrib-napoleon"
+]
 
 # Project URLs
 [project.urls]
+"Documentation" = "https://svalinn.github.io/pydagmc/"
 "Bug Tracker" = "https://github.com/svalinn/pydagmc/issues"
 "Source Code" = "https://github.com/svalinn/pydagmc"
 
