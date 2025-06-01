@@ -28,7 +28,7 @@ Unacceptable behaviors include, but are not limited to:
 
 ## Consequences of Unacceptable Behavior
 
-Unacceptable behavior will not be tolerated within the NukeBox community. Anyone asked to stop unacceptable behavior is expected to comply immediately.
+Unacceptable behavior will not be tolerated within the PyDAGMC community. Anyone asked to stop unacceptable behavior is expected to comply immediately.
 
 If a participant engages in unacceptable behavior, the maintainers may take any action they deem appropriate, up to and including expulsion from the project's community and public communication channels, temporary or permanent bans, and reporting to appropriate authorities.
 
