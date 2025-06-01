@@ -47,6 +47,7 @@ test = ["pytest"]
 ci = ["pytest-cov"]
 docs = [
     "sphinx>=5.0",
+    "ipykernel",
     "myst-parser",
     "linkify-it-py",
     "sphinx-book-theme",
