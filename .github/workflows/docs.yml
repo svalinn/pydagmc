@@ -35,12 +35,12 @@ jobs:
         run: |
           cd docs
           conda run -n base sphinx-build -b html source build
-          touch build/html/.nojekyll # Important for GitHub Pages
+          touch build/.nojekyll # Important for GitHub Pages
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: docs/build/html
+          path: docs/build
 
   deploy-docs:
     needs: build-docs
