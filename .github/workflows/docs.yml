@@ -25,17 +25,16 @@ jobs:
         with:
           channels: conda-forge
           mamba-version: "*"
-          auto-activate-base: true
 
       - name: Install dependencies
         run: |
-          conda install -y -c conda-forge moab=5.5.1 pandoc
+          conda install -y moab=5.5.1 pandoc
           conda run -n base pip install .[docs]
 
       - name: Build documentation
         run: |
           cd docs
-          sphinx-build -b html source build
+          conda run -n base sphinx-build -b html source build
           touch build/html/.nojekyll # Important for GitHub Pages
 
       - name: Upload Pages artifact
