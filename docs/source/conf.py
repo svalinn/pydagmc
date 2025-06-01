@@ -9,7 +9,7 @@
 import datetime
 
 project = 'PyDAGMC'
-copyright = '2023 - {}, The UW CNERG Team. All rights reserved.'.format(datetime.date.today().year)
+copyright = '2023 - {}, The UW CNERG Team. All rights reserved'.format(datetime.date.today().year)
 author = 'Patrick Shriwise, Paul Wilson, et al'
 
 # Attempt to get version from package metadata
