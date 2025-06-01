@@ -89,7 +89,7 @@ html_theme_options = {
 }
 
 # Nbsphinx settings
-nbsphinx_execute = 'never' # 'auto' or 'always'
+nbsphinx_execute = 'always'
 nbsphinx_allow_errors = True
 
 # html_css_files = ["custom.css"]
