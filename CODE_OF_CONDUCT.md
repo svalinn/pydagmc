@@ -34,7 +34,7 @@ If a participant engages in unacceptable behavior, the maintainers may take any 
 
 ## Reporting
 
-If you witness or experience behavior that violates this Code of Conduct, please contact the [Admin](mailto:admin@nukehub.org). All reports will be kept confidential.
+If you witness or experience behavior that violates this Code of Conduct, please contact [Paul Wilson](mailto:paul.wilson@wisc.edu). All reports will be kept confidential.
 
 ## Attribution
 
