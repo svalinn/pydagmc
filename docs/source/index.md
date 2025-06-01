@@ -1,4 +1,4 @@
-# Welcome to PyDAGMC's Documentation
+# Welcome to PyDAGMC
 
 PyDAGMC is a Python interface for interacting with DAGMC `.h5m` files
 through the embedded topological relationships and metadata contained within.
