@@ -22,5 +22,3 @@ We are committed to addressing security vulnerabilities in a timely manner and e
 Upon receiving a security vulnerability report, our security team will promptly review and assess the issue. We will work diligently to develop and test appropriate fixes. As soon as a security update is available, we will include relevant details in the release notes of the affected software versions.
 
 We greatly value the contributions of security researchers and users in ensuring the security of NukeBox. Thank you for your dedication to the safety and integrity of our software.
-
-[Back to README](README.md)
