@@ -6,8 +6,10 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
+import datetime
+
 project = 'PyDAGMC'
-copyright = '2025, The UW CNERG Team. All rights reserved.'
+copyright = '2023 - {}, The UW CNERG Team. All rights reserved.'.format(datetime.date.today().year)
 author = 'Patrick Shriwise, Paul Wilson, et al'
 
 # Attempt to get version from package metadata
@@ -78,23 +80,53 @@ intersphinx_mapping = {
 
 html_theme = 'sphinx_book_theme'
 html_static_path = ['_static']
+html_css_files = ["custom.css"]
+html_title = project
 html_logo = "_static/logo.png"
-# html_favicon = "_static/favicon.ico"
+html_favicon = "_static/logo.png"
+
+html_sidebars = {
+    "**": [
+        "navbar-logo",
+        "icon-links",
+        "sbt-sidebar-nav",
+    ]
+}
 
 html_theme_options = {
     "repository_url": "https://github.com/svalinn/pydagmc",
-    "use_repository_button": True,
-    "use_issues_button": True,
-    "use_edit_page_button": True,
     "path_to_docs": "docs/source",
+    "use_edit_page_button": True,
+    "use_source_button": True,
+    "use_issues_button": True,
+    "use_repository_button": True,
+    "use_download_button": True,
+    "use_fullscreen_button": True,
+    "use_sidenotes": True,
     "home_page_in_toc": True,
+    "show_toc_level": 2,
+    "logo": {
+        "text": html_title,
+    },
+    "icon_links": [
+        {
+            "name": "Build and Test",
+            "url": "https://github.com/svalinn/pydagmc/actions/workflows/ci.yml",
+            "icon": "https://github.com/svalinn/pydagmc/actions/workflows/ci.yml/badge.svg",
+            "type": "url",
+        },
+        {
+            "name": "Code Coverage",
+            "url": "https://codecov.io/github/svalinn/pydagmc",
+            "icon": "https://codecov.io/github/svalinn/pydagmc/branch/main/graph/badge.svg?token=TONI94VBED",
+            "type": "url",
+        },
+    ],
 }
 
 # Nbsphinx settings
 nbsphinx_execute = 'always'
 nbsphinx_allow_errors = True
-
-# html_css_files = ["custom.css"]
 
 # Autosummary generation
 autosummary_generate = True
