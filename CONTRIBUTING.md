@@ -84,7 +84,6 @@ Before you begin, ensure you have the following installed:
 - Follow [PEP 8 -- Style Guide for Python Code](https://www.python.org/dev/peps/pep-0008/).
 - Write clear, readable, and well-commented code where necessary.
 - Use type hints for function signatures and variables as much as possible. PyDAGMC uses `sphinx-autodoc-typehints` for documentation.
-- (Optional: If you decide to use linters/formatters like Black or Flake8, mention them here and how to run them.)
 
 ### Writing Tests
 
@@ -190,7 +189,7 @@ All contributors are expected to adhere to the [Code of Conduct][code-of-conduct
 If you have questions about contributing, feel free to:
 
 - Open an issue on GitHub with the "question" label.
-- (If you set up GitHub Discussions) Ask on the [Discussions page](https://github.com/svalinn/pydagmc/discussions).
+- Ask on the [Discussions page](https://github.com/svalinn/pydagmc/discussions).
 
 Thank you for contributing to PyDAGMC!
 
