@@ -30,7 +30,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          conda install -y -c conda-forge moab=5.5.1
+          conda install -y -c conda-forge moab=5.5.1 pandoc
           pip install .[docs]
 
       - name: Build documentation
