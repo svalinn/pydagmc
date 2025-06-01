@@ -29,6 +29,7 @@ extensions = [
     'sphinx.ext.intersphinx',
     'sphinx.ext.viewcode',
     'myst_parser',
+    'sphinxcontrib.mermaid',
     'sphinx_book_theme',
     'sphinx_copybutton',
     'sphinx_design',
@@ -52,6 +53,7 @@ myst_enable_extensions = [
     "tasklist",
 ]
 myst_heading_anchors = 3 # Auto-generate header anchors up to h3
+myst_fence_as_directive = ["mermaid"]
 
 # Autodoc settings
 autodoc_member_order = 'bysource'

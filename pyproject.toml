@@ -57,7 +57,8 @@ docs = [
     "sphinx-togglebutton",
     "nbsphinx",
     "sphinx-autodoc-typehints",
-    "sphinxcontrib-napoleon"
+    "sphinxcontrib-napoleon",
+    "sphinxcontrib-mermaid"
 ]
 
 # Project URLs
