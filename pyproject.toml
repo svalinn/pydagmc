@@ -16,8 +16,7 @@ authors = [
     { name = "Jonathan Shimwell", email = "drshimwell@gmail.com" }
 ]
 description = """
-A convenience interface for examining,
-modifying, and creating, DAGMC models using PyMOAB
+A convenience interface for examining, modifying, and creating, DAGMC models using PyMOAB
 """
 readme = "README.md"
 license = { text = "MIT" }
