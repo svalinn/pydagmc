@@ -50,7 +50,7 @@ The primary goal of PyDAGMC is to simplify common interactions with DAGMC models
 
 ## Key DAGMC Concepts and MOAB Tags
 
-PyDAGMC relies heavily on standard MOAB tags that DAGMC populates with specific semantic meaning. Understanding these tags is crucial to understanding how PyDAGMC interprets a `.h5m` file.
+PyDAGMC relies heavily on MOAB tag conventions that DAGMC populates with specific semantic meaning. Understanding these tags is crucial to understanding how PyDAGMC interprets a `.h5m` file.
 
 ### Entity Sets (`MBENTITYSET`)
 
