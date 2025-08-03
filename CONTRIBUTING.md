@@ -1,6 +1,6 @@
 # Contributing
 
-First off, thank you for considering contributing to PyDAGMC! We welcome contributions from everyone. Your help is essential for keeping it great.
+First off, thank you for considering contributing to PyDAGMC! We welcome contributions from everyone.
 
 This document provides guidelines for contributing to PyDAGMC. Please read it carefully to ensure a smooth and effective contribution process.
 
