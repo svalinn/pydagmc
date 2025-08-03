@@ -54,7 +54,6 @@ The primary goal of PyDAGMC is to simplify common interactions with DAGMC models
 
 For a detailed explanation of the underlying data structures, see the [](data-model.md) page.
 
-
 ## PyDAGMC Class Structure
 
 The main classes in PyDAGMC mirror the DAGMC entity hierarchy:
@@ -91,52 +90,6 @@ The main classes in PyDAGMC mirror the DAGMC entity hierarchy:
   * Provides access to its contained `Volume`s (`volumes`, `volumes_by_id`, `volume_ids`) and `Surface`s (`surfaces`, `surfaces_by_id`, `surface_ids`).
   * Supports adding (`add_set`) and removing (`remove_set`) entities.
   * The `merge()` method allows combining two groups with the same name.
-
-## Key Operations and Their Implementation
-
-* **Loading a Model (`Model(filename)`):**
-  * Initializes `pymoab.core.Core()`.
-  * Calls `mb.load_file(filename)`.
-  * Pre-populates `used_ids` by querying existing entities.
-
-* **Accessing Entities (e.g., `model.volumes_by_id`):**
-  * Uses `mb.get_entities_by_type_and_tag()` with the root set and the `CATEGORY_TAG` to find all entity sets of a specific type (e.g., "Volume").
-  * For each handle found, a PyDAGMC object (e.g., `Volume(model, handle)`) is instantiated.
-  * These are often collected into dictionaries keyed by ID for quick access.
-
-* **Triangle Data (`.triangle_coords`, `.triangle_conn`):**
-  * `Surface._get_triangle_sets()` returns itself.
-  * `Volume._get_triangle_sets()` iterates through its child surfaces and collects their handles.
-  * `Group._get_triangle_sets()` iterates through its child surfaces and volumes (recursively calling their `_get_triangle_sets()`).
-  * `GeometrySet.triangle_handles` then uses `mb.get_entities_by_type(handle, types.MBTRI)` on these collected surface/set handles.
-  * `mb.get_connectivity()` and `mb.get_coords()` are then used on the triangle handles.
-
-* **Material Assignment (`Volume.material`):**
-  * The `Volume.groups` property finds all parent groups of the volume.
-  * It then iterates through these groups, checking if their `group.name` starts with `"mat:"`. The first one found determines the material.
-  * Setting `Volume.material = "new_mat"` will:
-    * Remove the volume from its current material group (if any).
-    * Find or create a `Group` named `"mat:new_mat"`.
-    * Add the volume to this new/existing material group.
-
-* **Entity Creation (e.g., `Model.create_volume()`):**
-  * Calls `mb.create_meshset()` to get a new entity set handle.
-  * Wraps this handle in a temporary `GeometrySet` to set the default `CATEGORY_TAG` and `GEOM_DIMENSION_TAG` appropriate for the entity type (e.g., "Volume", 3).
-  * Then, the specific class (e.g., `Volume`) is instantiated with this configured handle.
-  * An ID is assigned, either user-provided or auto-generated to be unique within the model for that entity type.
-
-* **Volume Calculation (`Volume.volume`):**
-    The volume of a `Volume` object is calculated using the formula derived from the divergence theorem:
-
-    $$ V = \frac{1}{3} \sum_{i \in \text{surfaces}} \text{sign}_i \sum_{j \in \text{triangles in surface } i} (\mathbf{a}_j \times \mathbf{b}_j) \cdot \mathbf{c}_j / 2 $$
-
-    This simplifies to:
-
-    $$ V = \frac{1}{6} \sum_{s \in \text{Surfaces}} \text{sense}(s,V) \sum_{t \in \text{Triangles in } s} \det(\mathbf{v}_{t1}, \mathbf{v}_{t2}, \mathbf{v}_{t3}) $$
-
-    where $\text{sense}(s,V)$ is +1 if $V$ is the forward volume of surface $s$, and -1 if it's the reverse volume. $\mathbf{v}_{t1}, \mathbf{v}_{t2}, \mathbf{v}_{t3}$ are the vertex coordinates of triangle $t$.
-
-    PyDAGMC iterates through each `Surface` of the `Volume`. For each triangle in the surface, it computes $\sum (\mathbf{r}_0 \cdot (\mathbf{r}_1 - \mathbf{r}_0) \times (\mathbf{r}_2 - \mathbf{r}_0))$. The sum over all triangles is then scaled by $1/6$. The sign depends on whether the current `Volume` is the forward or reverse volume of the `Surface`.
 
 ## Limitations and Future Directions
 
