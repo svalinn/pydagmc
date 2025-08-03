@@ -6,7 +6,7 @@ some ways to get help:
 * **Issue Tracker:** Report bugs or request features on our [GitHub Issue Tracker](https://github.com/svalinn/pydagmc/issues).
 * **Discussions:** Ask questions or discuss usage on our [GitHub Discussions page](https://github.com/svalinn/pydagmc/discussions).
 
-When reporting an issue, please include:
+When reporting an issue, please include as much of the following information as is reasonable:
 
 * PyDAGMC version (`pip show pydagmc`)
 * MOAB version
