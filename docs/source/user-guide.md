@@ -7,8 +7,8 @@ and basic usage examples.
 
 ### Prerequisites
 
-PyDAGMC relies on [MOAB](https://ftp.mcs.anl.gov/pub/fathom/moab-docs/building.html) with Python bindings.
-Please ensure MOAB is installed and functional in your Python environment.
+PyDAGMC relies on [PyMOAB](https://ftp.mcs.anl.gov/pub/fathom/moab-docs/building.html) with Python bindings.
+Please ensure PyMOAB is installed and functional in your Python environment.
 
 ### Installing PyDAGMC
 
