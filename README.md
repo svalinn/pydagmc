@@ -23,7 +23,7 @@ Code:
 ```python
 import pydagmc
 
-model = pydagmc.DAGModel('dagmc.h5m')
+model = pydagmc.Model('dagmc.h5m')
 
 group_dict = model.groups_by_name
 print(group_dict)
