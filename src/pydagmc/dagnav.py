@@ -86,7 +86,7 @@ class Model:
             A dictionary where keys are material names (str) and values
             are lists of Volume objects.
         """
-        material_map: DefaultDict[str, list[Volume]] = defaultdict(list)
+        material_map: defaultdict[str, list[Volume]] = defaultdict(list)
         for volume in self.volumes:
             if volume.material is None:
                 continue
@@ -347,7 +347,7 @@ class GeometrySet:
             raise ValueError(f"{identifier} has no category or geom_dimension tags assigned.")
 
     def __eq__(self, other):
-        return type(other) == type(self) and \
+        return type(other) is type(self) and \
                self.model == other.model and \
                self.handle == other.handle
 
@@ -402,6 +402,11 @@ class GeometrySet:
     def category(self, category: str):
         """Set the DAGMC set's category."""
         self._tag_set_data(self.model.category_tag, category)
+
+    @property
+    def groups(self) -> list[Group]:
+        """Get list of groups containing this volume."""
+        return [group for group in self.model.groups if self in group]
 
     @abstractmethod
     def _get_triangle_sets(self):
@@ -585,6 +590,33 @@ class Surface(GeometrySet):
         self.senses = [self.forward_volume, volume]
 
     @property
+    def _boundary_group(self) -> Optional[Group]:
+        for group in self.groups:
+            if "boundary:" in group.name:
+                return group
+        return None
+
+    @property
+    def boundary(self) -> Optional[str]:
+        """Name of the boundary assigned to this surface."""
+        group = self._boundary_group
+        if group is not None:
+            return group.name[9:]
+        return None
+
+    @boundary.setter
+    def boundary(self, name: str):
+        group = self._boundary_group
+
+        if group is not None:
+            # Remove surface from existing group
+            group.remove_set(self)
+
+        # create a new group or get an existing group
+        group = Group.create(self.model, name=f"boundary:{name}")
+        group.add_set(self)
+
+    @property
     def volumes(self) -> list[Volume]:
         """Get the parent volumes of this surface.
         """
@@ -619,12 +651,7 @@ class Volume(GeometrySet):
         self._check_category_and_dimension()
 
     @property
-    def groups(self) -> list[Group]:
-        """Get list of groups containing this volume."""
-        return [group for group in self.model.groups if self in group]
-
-    @property
-    def _material_group(self):
+    def _material_group(self) -> Optional[Group]:
         for group in self.groups:
             if "mat:" in group.name:
                 return group
