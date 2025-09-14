@@ -605,7 +605,7 @@ class Surface(GeometrySet):
         return None
 
     @boundary.setter
-    def boundary(self, name: str):
+    def boundary(self, name: Optional[str]):
         group = self._boundary_group
 
         if group is not None:
@@ -613,8 +613,9 @@ class Surface(GeometrySet):
             group.remove_set(self)
 
         # create a new group or get an existing group
-        group = Group.create(self.model, name=f"boundary:{name}")
-        group.add_set(self)
+        if name is not None:
+            group = Group.create(self.model, name=f"boundary:{name}")
+            group.add_set(self)
 
     @property
     def volumes(self) -> list[Volume]:
