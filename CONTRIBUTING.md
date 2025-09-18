@@ -143,7 +143,7 @@ Before you begin, ensure you have the following installed:
         - Include any necessary information for reviewers.
 
 3. **Code Review:**
-    - Maintainers will review your PR. Be prepared to address feedback and make changes.
+    - Maintainers will review your PR. Be prepared to address feedback and make changes. Changes that are pushed to your branch in your fork will automatically update the PR.
     - The CI checks (GitHub Actions) must pass before your PR can be merged.
 
 4. **Merging:**
