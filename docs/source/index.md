@@ -48,7 +48,6 @@ data-model
 api/index
 contributing
 code-of-conduct
-security
 license
 getting-help
 ```
