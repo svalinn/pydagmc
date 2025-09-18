@@ -44,7 +44,6 @@ If you're new to PyDAGMC, we recommend starting with the [User's Guide](./user-g
 user-guide
 tutorial
 methodology
-data-model
 api/index
 contributing
 code-of-conduct
