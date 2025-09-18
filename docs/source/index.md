@@ -1,6 +1,6 @@
 # Welcome to PyDAGMC
 
-PyDAGMC is a Python interface for interacting with DAGMC `.h5m` files
+PyDAGMC is a Python interface for interacting with [DAGMC](https://svalinn.github.io/DAGMC/) `.h5m` files
 through the embedded topological relationships represented by conventional metadata therein.
 These interactions occur through a set of Python classes corresponding to
 DAGMC’s metadata Group, Volume, and Surface groupings in the mesh database.

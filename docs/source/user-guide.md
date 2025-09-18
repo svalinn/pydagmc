@@ -88,4 +88,4 @@ model.write_file('updated_dagmc.h5m')
 print("\nModel changes saved to updated_dagmc.h5m")
 ```
 
-That's it! PyDAGMC makes it easy to work with DAGMC models in Python. For a more in-depth exploration, check out the [Tutorial](tutorial.ipynb).
+That's it! PyDAGMC makes it easy to work with [DAGMC](https://svalinn.github.io/DAGMC/) models in Python. For a more in-depth exploration, check out the [Tutorial](tutorial.ipynb).

@@ -2,7 +2,12 @@
 
 # Methodology
 
-PyDAGMC provides a Pythonic abstraction layer over PyMOAB for interacting with DAGMC (Direct Accelerated Geometry Monte Carlo) `.h5m` files. This section delves into the underlying concepts, data structures, and design choices that enable PyDAGMC's functionality.
+PyDAGMC provides a Pythonic abstraction layer over PyMOAB for interacting with [DAGMC (Direct Accelerated Geometry Monte Carlo)](https://svalinn.github.io/DAGMC/) `.h5m` files. This section delves into the underlying concepts, data structures, and design choices that enable PyDAGMC's functionality.
+
+A DAGMC file contains a surface mesh representation of a geometry, including 
+metadata to define the topological relationships of that geometry and material
+assignments, using MOAB's mesh file conventions.  The metadata conventions are 
+specific to DAGMC.
 
 ## File Loading
 
