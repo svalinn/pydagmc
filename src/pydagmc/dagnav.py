@@ -601,7 +601,7 @@ class Surface(GeometrySet):
         """Name of the boundary assigned to this surface."""
         group = self._boundary_group
         if group is not None:
-            return group.removeprefix('boundary:')
+            return group.name.removeprefix('boundary:')
         return None
 
     @boundary.setter
