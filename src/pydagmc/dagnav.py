@@ -421,7 +421,7 @@ class GeometrySet:
             return group.name.removeprefix(key)
         return None
 
-    def _metadata_group(self, key: str, name: str):
+    def _set_metadata_group(self, key: str, name: str):
         group = self._metadata_group(key)
 
         if group is not None:
@@ -626,7 +626,7 @@ class Surface(GeometrySet):
         
     @boundary.setter
     def boundary(self, name: Optional[str]):
-        self._metadata_group(self._boundary_key, name)
+        self._set_metadata_group(self._boundary_key, name)
 
     @property
     def volumes(self) -> list[Volume]:
@@ -674,7 +674,7 @@ class Volume(GeometrySet):
 
     @material.setter
     def material(self, name: str):
-        self._metadata_group(self._material_key, name)
+        self._set_metadata_group(self._material_key, name)
 
     @property
     def surfaces(self) -> list[Surface]:
