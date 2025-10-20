@@ -616,7 +616,7 @@ class Surface(GeometrySet):
         self.senses = [self.forward_volume, volume]
 
     @property
-    def _boundary_group(self) -> Optional[Group]:
+    def boundary_group(self) -> Optional[Group]:
         return self._metadata_groups(self._boundary_key)
 
     @property
@@ -664,7 +664,7 @@ class Volume(GeometrySet):
         self._check_category_and_dimension()
 
     @property
-    def _material_group(self) -> Optional[Group]:
+    def material_group(self) -> Optional[Group]:
         return self._metadata_group(self._material_key)
 
     @property
