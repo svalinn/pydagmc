@@ -617,16 +617,16 @@ class Surface(GeometrySet):
 
     @property
     def _boundary_group(self) -> Optional[Group]:
-        return self._metadata_groups(cls._boundary_key)
+        return self._metadata_groups(self._boundary_key)
 
     @property
     def boundary(self) -> Optional[str]:
         """Name of the boundary assigned to this surface."""
-        return self._metadata_group_name(cls._boundary_key)
+        return self._metadata_group_name(self._boundary_key)
         
     @boundary.setter
     def boundary(self, name: Optional[str]):
-        self._metadata_group(cls._boundary_key, name)
+        self._metadata_group(self._boundary_key, name)
 
     @property
     def volumes(self) -> list[Volume]:
@@ -665,16 +665,16 @@ class Volume(GeometrySet):
 
     @property
     def _material_group(self) -> Optional[Group]:
-        return self._metadata_group(cls._material_key)
+        return self._metadata_group(self._material_key)
 
     @property
     def material(self) -> Optional[str]:
         """Name of the material assigned to this volume."""
-        return self._metadata_group_name(cls._material_key)
+        return self._metadata_group_name(self._material_key)
 
     @material.setter
     def material(self, name: str):
-        self._metadata_group(cls._material_key, name)
+        self._metadata_group(self._material_key, name)
 
     @property
     def surfaces(self) -> list[Surface]:
