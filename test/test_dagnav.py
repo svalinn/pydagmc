@@ -961,13 +961,13 @@ def test_surface_boundary():
     # Set a valid boundary condition
     surf.boundary = 'Reflecting'
     assert surf.boundary == 'Reflecting'
-    assert surf.boundary_group == 'boundary:Reflecting'
+    assert surf.boundary_group == model.groups_by_name['boundary:Reflecting']
     assert [1] == sorted(model.groups_by_name['boundary:Reflecting'].surface_ids)
 
     # Change the boundary condition
     surf.boundary = 'Vacuum'
     assert surf.boundary == 'Vacuum'
-    assert surf.boundary_group == 'boundary:Vacuum'
+    assert surf.boundary_group == model.groups_by_name['boundary:Vacuum']
     assert [1] == sorted(model.groups_by_name['boundary:Vacuum'].surface_ids)
     assert [] == sorted(model.groups_by_name['boundary:Reflecting'].surface_ids)
 
