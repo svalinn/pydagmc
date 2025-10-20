@@ -407,6 +407,31 @@ class GeometrySet:
     def groups(self) -> list[Group]:
         """Get list of groups containing this DAGMC set."""
         return [group for group in self.model.groups if self in group]
+    
+    def _metadata_group(self, prefix: str) -> list[Group]:
+        """Get single group containing this DAGMC set, with matching prefix."""
+        for group in self.model.groups:
+            if self in group and prefix in group.name:
+                return group            
+        return None
+    
+    def _metadata_group_name(self, prefix: str) -> Optional[str]:
+        group = self._metadata_group(prefix)
+        if group is not None:
+            return group.name.removeprefix(prefix)
+        return None
+
+    def _set_metadata_group(self, prefix: str, name: str):
+        group = self._metadata_group(prefix)
+
+        if group is not None:
+            # remove surface from existing group
+            group.remove_set(self)
+
+        # create a new group or get an existing group
+        if name is not None:
+            group = Group.create(self.model, name = prefix + name)
+            group.add_set(self)
 
     @abstractmethod
     def _get_triangle_sets(self):
@@ -539,8 +564,9 @@ class GeometrySet:
 
 class Surface(GeometrySet):
 
-    _category = 'Surface'
-    _geom_dimension = 2
+    _category: str  = 'Surface'
+    _geom_dimension: int = 2
+    _boundary_prefix: str = "boundary:"
 
     def __init__(self, model: Model, handle: np.uint64):
         super().__init__(model, handle)
@@ -590,32 +616,17 @@ class Surface(GeometrySet):
         self.senses = [self.forward_volume, volume]
 
     @property
-    def _boundary_group(self) -> Optional[Group]:
-        for group in self.groups:
-            if "boundary:" in group.name:
-                return group
-        return None
+    def boundary_group(self) -> Optional[Group]:
+        return self._metadata_group(self._boundary_prefix)
 
     @property
     def boundary(self) -> Optional[str]:
         """Name of the boundary assigned to this surface."""
-        group = self._boundary_group
-        if group is not None:
-            return group.name.removeprefix('boundary:')
-        return None
-
+        return self._metadata_group_name(self._boundary_prefix)
+        
     @boundary.setter
     def boundary(self, name: Optional[str]):
-        group = self._boundary_group
-
-        if group is not None:
-            # Remove surface from existing group
-            group.remove_set(self)
-
-        # create a new group or get an existing group
-        if name is not None:
-            group = Group.create(self.model, name=f"boundary:{name}")
-            group.add_set(self)
+        self._set_metadata_group(self._boundary_prefix, name)
 
     @property
     def volumes(self) -> list[Volume]:
@@ -646,37 +657,24 @@ class Volume(GeometrySet):
 
     _category: str = 'Volume'
     _geom_dimension: int = 3
+    _material_prefix: str = 'mat:'
 
     def __init__(self, model: Model, handle: np.uint64):
         super().__init__(model, handle)
         self._check_category_and_dimension()
 
     @property
-    def _material_group(self) -> Optional[Group]:
-        for group in self.groups:
-            if "mat:" in group.name:
-                return group
-        return None
+    def material_group(self) -> Optional[Group]:
+        return self._metadata_group(self._material_prefix)
 
     @property
     def material(self) -> Optional[str]:
         """Name of the material assigned to this volume."""
-        group = self._material_group
-        if group is not None:
-            return group.name[4:]
-        return None
+        return self._metadata_group_name(self._material_prefix)
 
     @material.setter
     def material(self, name: str):
-        group = self._material_group
-
-        if group is not None:
-            # Remove volume from existing group
-            group.remove_set(self)
-
-        # create a new group or get an existing group
-        group = Group.create(self.model, name=f"mat:{name}")
-        group.add_set(self)
+        self._set_metadata_group(self._material_prefix, name)
 
     @property
     def surfaces(self) -> list[Surface]:
