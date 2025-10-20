@@ -617,7 +617,7 @@ class Surface(GeometrySet):
 
     @property
     def boundary_group(self) -> Optional[Group]:
-        return self._metadata_groups(self._boundary_key)
+        return self._metadata_group(self._boundary_key)
 
     @property
     def boundary(self) -> Optional[str]:
