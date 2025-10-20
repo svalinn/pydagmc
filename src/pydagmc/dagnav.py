@@ -405,7 +405,7 @@ class GeometrySet:
 
     @property
     def groups(self) -> list[Group]:
-        """Get list of groups containing this volume."""
+        """Get list of groups containing this DAGMC set."""
         return [group for group in self.model.groups if self in group]
 
     @abstractmethod
