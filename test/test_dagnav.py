@@ -917,7 +917,7 @@ def test_surface_sense_value_error_on_wrong_length():
 
     # Create dummy volumes for valid input
     vol1 = model.create_volume(global_id=1)
-    
+
     # Empty list
     with pytest.raises(ValueError, match="Senses should be a list of two volumes."):
         surf.senses = []
@@ -946,6 +946,30 @@ def test_surface_create_invalid_filename():
     model = pydagmc.Model()
     with pytest.raises(ValueError, match="Only STL files are supported"):
         model.create_surface(filename='my_model.step')
+
+
+def test_surface_boundary():
+    """Test the boundary property of Surface."""
+    model = pydagmc.Model()
+    surf = model.create_surface(global_id=1)
+
+    # Initially, boundary should be None
+    assert surf.boundary is None
+
+    # Set a valid boundary condition
+    surf.boundary = 'Reflecting'
+    assert surf.boundary == 'Reflecting'
+    assert [1] == sorted(model.groups_by_name['boundary:Reflecting'].surface_ids)
+
+    # Change the boundary condition
+    surf.boundary = 'Vacuum'
+    assert surf.boundary == 'Vacuum'
+    assert [1] == sorted(model.groups_by_name['boundary:Vacuum'].surface_ids)
+    assert [] == sorted(model.groups_by_name['boundary:Reflecting'].surface_ids)
+
+    # Remove the boundary condition by setting it to None
+    surf.boundary = None
+    assert surf.boundary is None
 
 
 def test_geometryset_category_runtime_error(request):
