@@ -408,21 +408,21 @@ class GeometrySet:
         """Get list of groups containing this DAGMC set."""
         return [group for group in self.model.groups if self in group]
     
-    def _metadata_group(self, key: str) -> list[Group]:
-        """Get single group containing this DAGMC set, with matching key."""
+    def _metadata_group(self, prefix: str) -> list[Group]:
+        """Get single group containing this DAGMC set, with matching prefix."""
         for group in self.model.groups:
-            if self in group and key in group.name:
+            if self in group and prefix in group.name:
                 return group            
         return None
     
-    def _metadata_group_name(self, key: str) -> Optional[str]:
-        group = self._metadata_group(key)
+    def _metadata_group_name(self, prefix: str) -> Optional[str]:
+        group = self._metadata_group(prefix)
         if group is not None:
-            return group.name.removeprefix(key)
+            return group.name.removeprefix(prefix)
         return None
 
-    def _set_metadata_group(self, key: str, name: str):
-        group = self._metadata_group(key)
+    def _set_metadata_group(self, prefix: str, name: str):
+        group = self._metadata_group(prefix)
 
         if group is not None:
             # remove surface from existing group
@@ -430,7 +430,7 @@ class GeometrySet:
 
         # create a new group or get an existing group
         if name is not None:
-            group = Group.create(self.model, name = key + name)
+            group = Group.create(self.model, name = prefix + name)
             group.add_set(self)
 
     @abstractmethod
@@ -566,7 +566,7 @@ class Surface(GeometrySet):
 
     _category: str  = 'Surface'
     _geom_dimension: int = 2
-    _boundary_key: str = "boundary:"
+    _boundary_prefix: str = "boundary:"
 
     def __init__(self, model: Model, handle: np.uint64):
         super().__init__(model, handle)
@@ -617,16 +617,16 @@ class Surface(GeometrySet):
 
     @property
     def boundary_group(self) -> Optional[Group]:
-        return self._metadata_group(self._boundary_key)
+        return self._metadata_group(self._boundary_prefix)
 
     @property
     def boundary(self) -> Optional[str]:
         """Name of the boundary assigned to this surface."""
-        return self._metadata_group_name(self._boundary_key)
+        return self._metadata_group_name(self._boundary_prefix)
         
     @boundary.setter
     def boundary(self, name: Optional[str]):
-        self._set_metadata_group(self._boundary_key, name)
+        self._set_metadata_group(self._boundary_prefix, name)
 
     @property
     def volumes(self) -> list[Volume]:
@@ -657,7 +657,7 @@ class Volume(GeometrySet):
 
     _category: str = 'Volume'
     _geom_dimension: int = 3
-    _material_key: str = 'mat:'
+    _material_prefix: str = 'mat:'
 
     def __init__(self, model: Model, handle: np.uint64):
         super().__init__(model, handle)
@@ -665,16 +665,16 @@ class Volume(GeometrySet):
 
     @property
     def material_group(self) -> Optional[Group]:
-        return self._metadata_group(self._material_key)
+        return self._metadata_group(self._material_prefix)
 
     @property
     def material(self) -> Optional[str]:
         """Name of the material assigned to this volume."""
-        return self._metadata_group_name(self._material_key)
+        return self._metadata_group_name(self._material_prefix)
 
     @material.setter
     def material(self, name: str):
-        self._set_metadata_group(self._material_key, name)
+        self._set_metadata_group(self._material_prefix, name)
 
     @property
     def surfaces(self) -> list[Surface]:
