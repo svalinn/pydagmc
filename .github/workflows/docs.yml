@@ -1,0 +1,54 @@
+name: Build and Deploy Docs
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: # Allows manual triggering
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Needed for setuptools_scm
+
+      - name: Setup Conda
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          channels: conda-forge
+          mamba-version: "*"
+
+      - name: Install dependencies
+        run: |
+          conda install -y moab=5.5.1 pandoc
+          conda run -n base pip install .[docs]
+
+      - name: Build documentation
+        run: |
+          cd docs
+          conda run -n base sphinx-build -b html source build
+          touch build/.nojekyll # Important for GitHub Pages
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/build
+
+  deploy-docs:
+    needs: build-docs
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
