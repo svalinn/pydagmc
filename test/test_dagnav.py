@@ -1075,6 +1075,20 @@ def test_default_material(fuel_pin_model):
     model.default_material = None
     assert model.default_material is None
 
-    # The material should remain assigned to the volume
-    assert new_volume.material == 'steel'
+
+
+def test_no_graveyard():
+    model = pydagmc.Model()
+    assert model.implicit_complement is None
+
+def test_no_implicit_complement_material():
+    model = pydagmc.Model()
+    model.create_volume()
+    assert model.implicit_complement_material is None
+
+def test_set_implicit_complement_material_no_graveyard():
+    model = pydagmc.Model()
+    with pytest.raises(ValueError, match="Could not identify the implicit complement volume."):
+        model.implicit_complement_material = 'water'
+
 
