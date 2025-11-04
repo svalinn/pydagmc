@@ -1017,3 +1017,64 @@ def test_geometryset_check_tags_errors(request):
     with pytest.raises(ValueError, match="has no category or geom_dimension"):
         _ = pydagmc.Surface(model, raw_handle_surf_missing_all)
 
+def test_implicit_complement_material(fuel_pin_model):
+    model = fuel_pin_model
+
+    # The graveyard volume is volume 6 in the test model
+    graveyard = model.volumes_by_id[6]
+    assert model.implicit_complement == graveyard
+
+    # Initially, no implicit complement material is set
+    assert model.implicit_complement_material is None
+    assert graveyard.material == 'Graveyard'
+
+    # Set the implicit complement material to the existing material of the graveyard
+    model.implicit_complement_material = 'Graveyard'
+    assert model.implicit_complement_material == 'Graveyard'
+    assert graveyard.material_group.name == 'mat:Graveyard_comp'
+    assert graveyard.material == 'Graveyard' # Should not change
+
+    # Set the implicit complement material to a new material
+    model.implicit_complement_material = 'water'
+    assert model.implicit_complement_material == 'water'
+    assert 'mat:Graveyard' in model.groups_by_name
+    assert len(model.groups_by_name['mat:Graveyard'].volumes) == 0
+    assert 'mat:water_comp' in model.groups_by_name
+    assert graveyard in model.groups_by_name['mat:water_comp'].volumes
+    assert graveyard.material == 'water'
+    assert graveyard.material_group.name == 'mat:water_comp'
+
+    # Set back to None
+    model.implicit_complement_material = None
+    assert model.implicit_complement_material is None
+    assert graveyard.material_group.name == 'mat:water'
+    assert graveyard.material == 'water'
+
+def test_default_material(fuel_pin_model):
+    model = fuel_pin_model
+
+    # Initially, no default material is set
+    assert model.default_material is None
+
+    # Create a new volume, which should not have a material
+    new_volume = model.create_volume()
+    assert new_volume.material is None
+
+    # Check that the new volume is in the list of volumes without material
+    volumes_without_material = model.volumes_without_material
+    assert new_volume in volumes_without_material
+
+    # Set the default material
+    model.default_material = 'steel'
+    assert model.default_material == 'steel'
+
+    # Check that the new volume now has the default material
+    assert new_volume.material == 'steel'
+
+    # Unset the default material
+    model.default_material = None
+    assert model.default_material is None
+
+    # The material should remain assigned to the volume
+    assert new_volume.material == 'steel'
+

@@ -170,6 +170,83 @@ class Model:
     def group_names(self) -> list[str]:
         return self.groups_by_name.keys()
 
+    @property
+    def implicit_complement(self) -> Optional[Volume]:
+        """
+        Returns the implicit complement volume.
+
+        The implicit complement volume is identified as the volume
+        that has the material 'Graveyard'.
+        """
+        for volume in self.volumes:
+            if volume.material == 'Graveyard':
+                return volume
+        return None
+
+    @property
+    def implicit_complement_material(self) -> Optional[str]:
+        """
+        The material of the implicit complement.
+        """
+        # Find group with name like 'mat:*_comp'
+        for group in self.groups:
+            if group.name and group.name.startswith('mat:') and group.name.endswith('_comp'):
+                return group.name.removeprefix('mat:').removesuffix('_comp')
+        return None
+
+    @implicit_complement_material.setter
+    def implicit_complement_material(self, material_name: Optional[str]):
+        """
+        Set the material of the implicit complement.
+        """
+        # First, find and unset any existing implicit complement material group
+        for group in self.groups:
+            if group.name and group.name.startswith('mat:') and group.name.endswith('_comp'):
+                group.name = group.name.removesuffix('_comp')
+                break
+
+        if material_name is not None:
+            # Find the group for the new material
+            material_group_name = f"mat:{material_name}"
+            if material_group_name in self.groups_by_name:
+                group = self.groups_by_name[material_group_name]
+                group.name = f"{group.name}_comp"
+            else:
+                # If the group does not exist, we need to find the graveyard and assign it.
+                graveyard = self.implicit_complement
+                if graveyard is None:
+                    raise ValueError("Could not identify the implicit complement volume.")
+                graveyard.material = material_name
+                graveyard.material_group.name = f"{graveyard.material_group.name}_comp"
+
+    @property
+    def default_material(self) -> Optional[str]:
+        """
+        The default material for volumes without a material.
+        """
+        for group in self.groups:
+            if group.name and group.name.startswith('pydagmc:default_material:'):
+                return group.name.split(':')[-1]
+        return None
+
+    @default_material.setter
+    def default_material(self, material_name: Optional[str]):
+        """
+        Set the default material for volumes without a material.
+        """
+        # First, remove any existing default material marker
+        for group in self.groups:
+            if group.name and group.name.startswith('pydagmc:default_material:'):
+                group.delete()
+                break
+
+        if material_name is not None:
+            # Assign the material to all volumes without one.
+            for volume in self.volumes_without_material:
+                volume.material = material_name
+            # Create a marker group to store the default material name
+            self.create_group(name=f'pydagmc:default_material:{material_name}')
+
     def __repr__(self):
         return f'{type(self).__name__}: {len(self.volumes)} Volumes, {len(self.surfaces)} Surfaces, {len(self.groups)} Groups'
 
@@ -670,11 +747,17 @@ class Volume(GeometrySet):
     @property
     def material(self) -> Optional[str]:
         """Name of the material assigned to this volume."""
-        return self._metadata_group_name(self._material_prefix)
+        name = self._metadata_group_name(self._material_prefix)
+        if name:
+            return name.removesuffix('_comp')
+        return None
 
     @material.setter
     def material(self, name: str):
+        is_comp = self.material_group and self.material_group.name.endswith('_comp')
         self._set_metadata_group(self._material_prefix, name)
+        if is_comp:
+            self.material_group.name += '_comp'
 
     @property
     def surfaces(self) -> list[Surface]:
@@ -732,10 +815,12 @@ class Group(GeometrySet):
 
     @name.setter
     def name(self, val: str):
-        if val.lower() in self.model.group_names:
+        current_name = self.name
+        if val.lower() in self.model.group_names and val.lower() != current_name.lower():
             raise ValueError(f'Group {val} already used in model.')
 
         self.model.mb.tag_set_data(self.model.name_tag, self.handle, val)
+
 
     def _get_geom_ent_by_id(self, entity_type, id):
         category_ents = self.model.mb.get_entities_by_type_and_tag(self.handle, types.MBENTITYSET, [self.model.category_tag], [entity_type])
