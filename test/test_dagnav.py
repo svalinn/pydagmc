@@ -1091,4 +1091,16 @@ def test_set_implicit_complement_material_no_graveyard():
     with pytest.raises(ValueError, match="Could not identify the implicit complement volume."):
         model.implicit_complement_material = 'water'
 
+def test_change_implicit_complement_material():
+    model = pydagmc.Model()
+    graveyard = model.create_volume()
+    graveyard.material = 'Graveyard'
+    model.implicit_complement_material = 'water'
+    assert model.implicit_complement.material == 'water'
+    assert model.implicit_complement.material_group.name == 'mat:water_comp'
+
+    model.implicit_complement.material = 'steel'
+    assert model.implicit_complement.material == 'steel'
+    assert model.implicit_complement.material_group.name == 'mat:steel_comp'
+
 
