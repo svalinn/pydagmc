@@ -858,6 +858,24 @@ def test_area(fuel_pin_model):
         pytest.approx(model.surfaces[surf_id].area, exp_area)
 
 
+def test_bounds(fuel_pin_model):
+    model = fuel_pin_model
+    vol1_bounds = model.volumes_by_id[1].bounds
+    expected_bounds = (-7.0, 7.0, -7.0, 7.0, -20.0, 20.0)
+    for val, exp_val in zip(vol1_bounds, expected_bounds):
+        pytest.approx(val, exp_val)
+
+    exp_surface_bounds = {1: (-7.0, 7.0, -7.0, 7.0, -20.0, 20.0),
+                          2: (-9.0, 9.0, -9.0, 9.0, -20.0, 20.0),
+                          3: (-10.0, 10.0, -10.0, 10.0, -20.0, 20.0),}
+
+    # test all surface bounds
+    for surf_id, expected_bounds in exp_surface_bounds.items():
+        surface_bounds = model.surfaces_by_id[surf_id].bounds
+        for val, exp_val in zip(surface_bounds, expected_bounds):
+            pytest.approx(val, exp_val)
+
+
 def test_add_groups(fuel_pin_model):
     model = fuel_pin_model
     volumes = model.volumes_by_id
