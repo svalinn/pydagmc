@@ -2,6 +2,7 @@ from pathlib import Path
 import urllib.request
 import pytest
 import numpy as np
+from numpy.testing import assert_equal
 from test import config
 from pymoab import core
 
@@ -861,20 +862,17 @@ def test_area(fuel_pin_model):
 def test_bounds(fuel_pin_model):
     model = fuel_pin_model
     vol1_bounds = model.volumes_by_id[1].bounds
-    expected_bounds = (-7.0, 7.0, -7.0, 7.0, -20.0, 20.0)
-    for val, exp_val in zip(vol1_bounds, expected_bounds):
-        pytest.approx(val, exp_val)
+    expected_bounds = ([-7.0, -7.0, -20.0], [7.0, 7.0, 20.0])
+    assert_equal(vol1_bounds, expected_bounds)
 
-    exp_surface_bounds = {1: (-7.0, 7.0, -7.0, 7.0, -20.0, 20.0),
-                          2: (-9.0, 9.0, -9.0, 9.0, -20.0, 20.0),
-                          3: (-10.0, 10.0, -10.0, 10.0, -20.0, 20.0),}
+    exp_surface_bounds = {1: ([-7.0, -7.0, -20.0], [7.0, 7.0, 20.0]),
+                          11: ([-11, -11, 20], [11, 11, 20]),
+                          27: ([-24.5, -24.5, -24.5], [-24.5, 24.5, 24.5])}
 
     # test all surface bounds
     for surf_id, expected_bounds in exp_surface_bounds.items():
         surface_bounds = model.surfaces_by_id[surf_id].bounds
-        for val, exp_val in zip(surface_bounds, expected_bounds):
-            pytest.approx(val, exp_val)
-
+        assert_equal(surface_bounds, expected_bounds)
 
 def test_add_groups(fuel_pin_model):
     model = fuel_pin_model

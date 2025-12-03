@@ -485,8 +485,9 @@ class GeometrySet:
 
         Returns
         -------
-        tuple(float, float, float, float, float, float)
-            (xmin, xmax, ymin, ymax, zmin, zmax)
+        tuple(numpy.ndarray shape=(3,), dtype=np.float64,
+              numpy.ndarray shape=(3,), dtype=np.float64)
+            Minimum and maximum coordinates of the bounding box.
         """
         coords = self.triangle_coords
         min_coord = np.min(coords, axis=0)
