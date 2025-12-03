@@ -407,14 +407,14 @@ class GeometrySet:
     def groups(self) -> list[Group]:
         """Get list of groups containing this DAGMC set."""
         return [group for group in self.model.groups if self in group]
-    
+
     def _metadata_group(self, prefix: str) -> list[Group]:
         """Get single group containing this DAGMC set, with matching prefix."""
         for group in self.model.groups:
             if self in group and prefix in group.name:
-                return group            
+                return group
         return None
-    
+
     def _metadata_group_name(self, prefix: str) -> Optional[str]:
         group = self._metadata_group(prefix)
         if group is not None:
@@ -478,6 +478,21 @@ class GeometrySet:
         conn = self.triangle_conn
 
         return self.model.mb.get_coords(conn.flatten()).reshape(-1, 3)
+
+    @property
+    def bounds(self):
+        """Returns the axis-aligned bounding box for all triangles under this set.
+
+        Returns
+        -------
+        tuple(numpy.ndarray shape=(3,), dtype=np.float64,
+              numpy.ndarray shape=(3,), dtype=np.float64)
+            Minimum and maximum coordinates of the bounding box.
+        """
+        coords = self.triangle_coords
+        min_coord = np.min(coords, axis=0)
+        max_coord = np.max(coords, axis=0)
+        return min_coord, max_coord
 
     def get_triangle_conn_and_coords(self, compress=False):
         """Returns the triangle connectivity and coordinates for all triangles under this set.
@@ -623,7 +638,7 @@ class Surface(GeometrySet):
     def boundary(self) -> Optional[str]:
         """Name of the boundary assigned to this surface."""
         return self._metadata_group_name(self._boundary_prefix)
-        
+
     @boundary.setter
     def boundary(self, name: Optional[str]):
         self._set_metadata_group(self._boundary_prefix, name)
