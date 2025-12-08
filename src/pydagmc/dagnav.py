@@ -701,6 +701,16 @@ class Volume(GeometrySet):
         return {s.id: s for s in self.surfaces}
 
     @property
+    def adjacent_volumes(self) -> list[Volume]:
+        """Returns a list of volumes adjacent to this volume."""
+        adjacent_vols = set()
+        for surface in self.surfaces:
+            for vol in surface.volumes:
+                if vol != self:
+                    adjacent_vols.add(vol)
+        return sorted(list(adjacent_vols), key=lambda v: v.id)
+
+    @property
     def num_triangles(self) -> int:
         """Returns the number of triangles in this volume"""
         return sum([s.num_triangles for s in self.surfaces])

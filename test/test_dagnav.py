@@ -1033,3 +1033,30 @@ def test_geometryset_check_tags_errors(request):
     with pytest.raises(ValueError, match="has no category or geom_dimension"):
         _ = pydagmc.Surface(model, raw_handle_surf_missing_all)
 
+
+def test_adjacent_volumes(fuel_pin_model):
+
+    # innermost volume
+    model = fuel_pin_model
+    vol1 = model.volumes_by_id[1]
+    adj_vols = vol1.adjacent_volumes
+    assert len(adj_vols) == 1
+    assert model.volumes_by_id[2] in adj_vols
+
+    # middle volume
+    vol2 = model.volumes_by_id[2]
+    adj_vols = vol2.adjacent_volumes
+    assert len(adj_vols) == 2
+    assert model.volumes_by_id[1] in adj_vols
+    assert model.volumes_by_id[3] in adj_vols
+
+    # outermost pin volume
+    vol3 = model.volumes_by_id[3]
+    adj_vols = vol3.adjacent_volumes
+    assert len(adj_vols) == 1
+    assert model.volumes_by_id[2] in adj_vols
+
+    # graveyard volume -- doesn't touch any other explicit volumes
+    vol6 = model.volumes_by_id[6]
+    adj_vols = vol6.adjacent_volumes
+    assert len(adj_vols) == 0
