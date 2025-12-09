@@ -706,8 +706,8 @@ class Volume(GeometrySet):
         adjacent_vols = set()
         for surface in self.surfaces:
             for vol in surface.volumes:
-                if vol != self:
-                    adjacent_vols.add(vol)
+                adjacent_vols.add(vol)
+        adjacent_vols.discard(self)
         return sorted(list(adjacent_vols), key=lambda v: v.id)
 
     @property
