@@ -1,0 +1,34 @@
+.logo__image {
+  height: 64px !important;
+  padding-right: 0.5rem !important;
+}
+.navbar-brand {
+  flex-direction: unset !important;
+}
+.logo__title {
+  font-size: 2rem !important;
+  font-weight: 600;
+}
+@media (max-width: 1220px) {
+  .bd-sidebar-primary {
+    flex-basis: auto !important;
+  }
+}
+.navbar-icon-links {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center;
+}
+#ethical-ad-placement{
+  display: none !important;
+}
+.sphinx-tabs-panel{
+  border: 1px solid var(--pst-color-border) !important;
+  border-top: 0 !important;
+  background: none !important;
+}
+.sphinx-tabs-tab[aria-selected="true"]{
+  border: 1px solid var(--pst-color-border) !important;
+  border-bottom: 1px solid var(--pst-color-background) !important;
+  background-color: transparent !important;
+}
